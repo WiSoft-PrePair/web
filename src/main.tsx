@@ -1,0 +1,34 @@
+import { MotionConfig } from 'motion/react'
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { createBrowserRouter, RouterProvider } from 'react-router'
+import './index.css'
+import Landing from './pages/Landing'
+import AnswerList from './pages/AnswerList'
+import Jobs from './pages/Jobs'
+import Login from './pages/Login'
+import MockInterview from './pages/MockInterview'
+import MyPage from './pages/MyPage'
+import ServiceHome from './pages/ServiceHome'
+import Signup from './pages/Signup'
+import TextAnswer from './pages/TextAnswer'
+
+const router = createBrowserRouter([
+  { path: '/', element: <Landing /> },
+  { path: '/login', element: <Login /> },
+  { path: '/signup', element: <Signup /> },
+  { path: '/app', element: <ServiceHome /> },
+  { path: '/app/answer', element: <AnswerList /> },
+  { path: '/app/answer/:id', element: <TextAnswer /> },
+  { path: '/app/interview', element: <MockInterview /> },
+  { path: '/app/jobs', element: <Jobs /> },
+  { path: '/app/me', element: <MyPage /> },
+])
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <MotionConfig reducedMotion="user">
+      <RouterProvider router={router} />
+    </MotionConfig>
+  </StrictMode>,
+)
