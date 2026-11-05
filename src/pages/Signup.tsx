@@ -98,7 +98,7 @@ export default function Signup() {
 
             <form onSubmit={onNext} className="mt-12 space-y-7">
               <Field label="이메일">
-                <div className="flex items-center gap-3 border-b border-line transition-colors focus-within:border-lime">
+                <div className="flex items-center gap-3 border-b border-line transition-colors focus-within:border-paper">
                   <input
                     aria-label="이메일"
                     type="email"
@@ -112,7 +112,7 @@ export default function Signup() {
                     className={`${bareInput} read-only:text-soft`}
                   />
                   {verify === 'verified' ? (
-                    <span className="flex shrink-0 items-center gap-1 text-[13px] font-medium text-lime">
+                    <span className="flex shrink-0 items-center gap-1 text-[13px] font-medium text-paper">
                       <Check className="h-3.5 w-3.5" /> 인증됨
                     </span>
                   ) : (
@@ -120,7 +120,7 @@ export default function Signup() {
                       type="button"
                       disabled={!emailValid}
                       onClick={sendCode}
-                      className="shrink-0 text-sm font-medium text-lime transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:text-dim disabled:hover:opacity-100"
+                      className="shrink-0 text-sm font-medium text-paper transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:text-dim disabled:hover:opacity-100"
                     >
                       {verify === 'sent' ? '다시 받기' : '인증하기'}
                     </button>
@@ -137,7 +137,7 @@ export default function Signup() {
               </AnimatePresence>
 
               <Field label="비밀번호">
-                <div className="flex items-center gap-3 border-b border-line transition-colors focus-within:border-lime">
+                <div className="flex items-center gap-3 border-b border-line transition-colors focus-within:border-paper">
                   <input
                     aria-label="비밀번호"
                     placeholder="8자 이상"
@@ -212,7 +212,7 @@ export default function Signup() {
             {/* 얇은 로딩 바: 다 차면 메인으로 */}
             <div className="mx-auto mt-8 h-[3px] w-40 overflow-hidden rounded-full bg-white/[0.08]" role="progressbar" aria-label="불러오는 중">
               <motion.div
-                className="h-full rounded-full bg-lime"
+                className="h-full rounded-full bg-paper"
                 initial={{ width: '0%' }}
                 animate={{ width: '100%' }}
                 transition={{ duration: WELCOME_MS / 1000, ease: [0.65, 0, 0.35, 1] }}
@@ -249,7 +249,7 @@ function OtpInput({ value, onChange }: { value: string; onChange: (v: string) =>
           <span
             key={i}
             className={`grid h-12 place-items-center rounded-xl border bg-ink-2 font-display text-xl font-semibold text-paper transition-colors ${
-              current ? 'border-lime' : i < value.length ? 'border-mute' : 'border-line'
+              current ? 'border-paper' : i < value.length ? 'border-mute' : 'border-line'
             }`}
           >
             {value[i] ?? ''}
@@ -311,7 +311,7 @@ function Stepper({ step, canGoNext, onGo, onBack }: { step: 1 | 2; canGoNext: bo
           >
             <span className="relative block h-[3px] overflow-hidden rounded-full bg-white/[0.08]">
               <motion.span
-                className="absolute inset-0 origin-left rounded-full bg-lime"
+                className="absolute inset-0 origin-left rounded-full bg-paper"
                 initial={false}
                 animate={{ scaleX: filled ? 1 : 0 }}
                 transition={{ duration: 0.45, ease: EASE }}
@@ -338,7 +338,7 @@ function Field({ label, hint, hintTone, appear = false, children }: { label: str
     >
       <span className="block text-[13px] text-soft">{label}</span>
       {children}
-      {hint && <span className={`mt-2.5 block text-xs ${hintTone === 'lime' ? 'text-lime' : 'text-mute'}`}>{hint}</span>}
+      {hint && <span className={`mt-2.5 block text-xs ${hintTone === 'lime' ? 'text-paper' : 'text-mute'}`}>{hint}</span>}
     </motion.div>
   )
 }

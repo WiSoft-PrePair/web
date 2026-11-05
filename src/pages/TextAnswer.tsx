@@ -4,9 +4,9 @@ import { type FormEvent, useEffect, useLayoutEffect, useRef, useState } from 're
 import { Link, Navigate, useLocation, useParams } from 'react-router'
 import { AppShell } from '../components/AppShell'
 import { BookmarkButton } from '../components/BookmarkButton'
+import { ScoreRing } from '../components/ScoreRing'
 import { toggleBookmark, useBookmarks } from '../data/bookmarks'
-import { readMemo, saveMemo } from '../data/memos'
-import { type Feedback, fullDate, QUESTIONS, type QuestionRecord, type Tag } from '../data/questions'
+import { type Feedback, QUESTIONS, type QuestionRecord, type Tag } from '../data/questions'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -41,8 +41,8 @@ function mockFeedback(answer: string, attempt: number): Feedback {
 /**
  * 텍스트 면접 상세 (문서형, 화면만): 목록에서 질문 하나를 눌러 들어온다.
  * 왼쪽: 질문 → STAR 가이드 → 작성 칸 (쓰기만).
- * 오른쪽: 이 질문에 쓴 답변 기록 목록. 누르면 오른쪽에서 창이 열려 그 답변과 피드백을 보여 준다. (모바일은 목록이 아래로)
- * 제출하면 새 답변의 피드백 창이 바로 열린다.
+ * 오른쪽: 이 질문에 쓴 답변 기록 목록. 누르면 왼쪽 작성 칸 자리가 그 답변의 결과로 바뀐다. (모바일은 목록이 아래로)
+ * 제출하면 새 답변의 결과가 같은 자리에 바로 뜬다.
  * TODO: 답변 제출·피드백·기록 API(interview-service) 연동
  */
 export default function TextAnswer() {
@@ -69,12 +69,13 @@ function AnswerDoc({ record }: { record: QuestionRecord }) {
         ]
       : []),
   ])
-  // 옆 창으로 열어 본 답변 (없으면 닫힘)
+  // 결과로 보고 있는 답변 (없으면 작성 칸)
   const [selected, setSelected] = useState<number | null>(null)
   const [draft, setDraft] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const bookmarked = useBookmarks().has(record.id)
-  // 답변 기록은 4개까지만 보이고 나머지는 목록 안에서 스크롤
+  // 답변 기록은 5개까지만 보이고 나머지는 목록 안에서 스크롤
+  const VISIBLE = 5
   const historyBox = useRef<HTMLDivElement>(null)
   const [historyMax, setHistoryMax] = useState<number>()
   useLayoutEffect(() => {
@@ -82,7 +83,7 @@ function AnswerDoc({ record }: { record: QuestionRecord }) {
     if (!list) return
     const measure = () => {
       const items = list.querySelectorAll(':scope > li')
-      setHistoryMax(items.length <= 4 ? undefined : 1 + [...items].slice(0, 4).reduce((sum, li) => sum + (li as HTMLElement).offsetHeight, 0))
+      setHistoryMax(items.length <= VISIBLE ? undefined : Math.ceil(1 + [...items].slice(0, VISIBLE).reduce((sum, li) => sum + li.getBoundingClientRect().height, 0)))
     }
     measure()
     // 글꼴이 늦게 로드되거나 창 폭이 바뀌어 줄 높이가 달라지면 다시 잰다
@@ -154,20 +155,41 @@ function AnswerDoc({ record }: { record: QuestionRecord }) {
           <article className="min-w-0">
             <h1 className="text-[clamp(22px,2.2vw,28px)] leading-snug font-semibold tracking-tight text-paper">{record.question}</h1>
 
-            <Composer value={draft} onChange={setDraft} onSubmit={submit} submitting={submitting} />
+            {/* 기록을 고르면 이 자리가 그 답변의 결과로 바뀐다. 쓰던 글(draft)은 위에서 들고 있어 그대로 남는다 */}
+            <AnimatePresence mode="wait" initial={false}>
+              {current && selected !== null ? (
+                <motion.div key={`result-${selected}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25, ease: EASE }}>
+                  <ResultView index={selected} attempt={current} tag={record.tag} />
+                </motion.div>
+              ) : (
+                <motion.div key="compose" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25, ease: EASE }}>
+                  <Composer value={draft} onChange={setDraft} onSubmit={submit} submitting={submitting} />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </article>
 
           {/* 오른쪽: 이 질문의 답변 기록 (누르면 옆 창) */}
-          <aside aria-label="답변 기록" className="lg:sticky lg:top-28 lg:self-start">
-            <h2 className="text-[14px] font-medium text-paper">
-              답변 기록 <span className="ml-1 text-mute tabular-nums">{attempts.length}</span>
-            </h2>
+          <aside aria-label="답변 기록" className="lg:sticky lg:top-28 lg:self-start lg:pt-[9px]">
+            <div className="flex items-center justify-between">
+              <h2 className="text-[14px] font-medium text-paper">
+                답변 기록 <span className="ml-1 text-mute tabular-nums">{attempts.length}</span>
+              </h2>
+              {/* 새 답변 쓰기 */}
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                aria-label={draft.trim() ? '쓰던 답변 이어 쓰기' : '새 답변 쓰기'}
+                title={draft.trim() ? '쓰던 답변 이어 쓰기' : '새 답변 쓰기'}
+                className={`-mr-1.5 grid h-8 w-8 place-items-center rounded-full transition-colors hover:bg-tint/[0.06] hover:text-paper ${selected === null ? 'text-paper' : 'text-soft'}`}
+              >
+                <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </button>
+            </div>
             {/* 스크롤 영역: 오른쪽에 스크롤바 자리를 따로 두어 글자를 가리지 않게, 스크롤바는 밝은 회색 */}
-            <div
-              ref={historyBox}
-              style={{ maxHeight: historyMax }}
-              className="thin-scroll -mx-3 mt-3 overflow-y-auto px-3 [scrollbar-gutter:stable]"
-            >
+            <div ref={historyBox} style={{ maxHeight: historyMax }} className="thin-scroll -mx-3 mt-3 overflow-y-auto px-3 [scrollbar-gutter:stable]">
               <ol className="border-t border-line">
                 {[...attempts.keys()].reverse().map((i) => {
                   const a = attempts[i]
@@ -178,11 +200,11 @@ function AnswerDoc({ record }: { record: QuestionRecord }) {
                         type="button"
                         aria-current={on ? 'true' : undefined}
                         onClick={() => setSelected(i)}
-                        className={`-mx-3 block w-[calc(100%+1.5rem)] rounded-xl px-3 py-3.5 text-left transition-colors ${on ? 'bg-tint/[0.04]' : 'hover:bg-tint/[0.03]'}`}
+                        className={`block w-full rounded-lg px-3 py-3.5 text-left transition-colors ${on ? 'bg-tint/[0.04]' : 'hover:bg-tint/[0.03]'}`}
                       >
-                        <span className="flex items-baseline justify-between">
-                          <span className={`text-[13px] ${on ? 'font-medium text-paper' : 'text-soft'}`}>{fullDate(a.date)}</span>
-                          <span className="font-display text-[14px] font-medium text-soft tabular-nums">{a.feedback.score}</span>
+                        <span className="flex items-center justify-between">
+                          <span className={`text-[13px] ${on ? 'font-medium text-paper' : 'text-soft'}`}>{a.date}</span>
+                          <ScoreRing score={a.feedback.score} size={28} />
                         </span>
                         <span className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-mute">{a.answer}</span>
                       </button>
@@ -192,13 +214,9 @@ function AnswerDoc({ record }: { record: QuestionRecord }) {
               </ol>
             </div>
             {attempts.length === 0 && <p className="py-6 text-[13px] text-mute">아직 답변이 없어요. 첫 답변을 써 보세요.</p>}
-
-            <Memo id={record.id} />
           </aside>
         </div>
       </div>
-
-      <AnswerDrawer index={selected} attempt={current} record={record} onClose={() => setSelected(null)} />
     </AppShell>
   )
 }
@@ -209,8 +227,6 @@ type Detail = {
   summary: string
   good: string
   next: string
-  /** STAR 네 칸이 충분히 들어갔는지 */
-  star: { key: string; label: string; ok: boolean }[]
   rewrite: string
   followUps: string[]
 }
@@ -243,9 +259,8 @@ const REWRITE: Record<Tag, string> = {
 }
 
 /** 점수와 답변으로 그럴듯한 상세 피드백을 만든다 (API 붙기 전 화면 확인용) */
-function mockDetail(f: Feedback, answer: string, tag: Tag): Detail {
+function mockDetail(f: Feedback, tag: Tag): Detail {
   const s = f.score
-  const has = (k: string) => answer.includes(`[${k}]`)
   return {
     summary:
       s >= 85
@@ -255,171 +270,116 @@ function mockDetail(f: Feedback, answer: string, tag: Tag): Detail {
           : '핵심 개념은 짚었지만, 언제 어떤 상황이었는지와 결과가 비어 있어요. 지금은 정의를 말한 답변에 가까워서, 내 경험을 한 가지 붙여 보면 좋아요.',
     good: `${f.good} ${GOOD_MORE[tag]}`,
     next: `${f.next} ${NEXT_MORE[tag]}`,
-    star: [
-      { key: 'S', label: '상황', ok: has('상황') || s >= 70 },
-      { key: 'T', label: '과제', ok: has('과제') || s >= 85 },
-      { key: 'A', label: '행동', ok: has('행동') || s >= 65 },
-      { key: 'R', label: '결과', ok: has('결과') || s >= 90 },
-    ],
     rewrite: REWRITE[tag],
     followUps: FOLLOW_UPS[tag],
   }
 }
 
 /**
- * 오른쪽에서 열리는 지난 답변 창. Esc·바깥·× 로 닫힘.
- * 첫 화면에 핵심만: 점수·총평·STAR → 좋았어요 / 이것만 고치면 → 고쳐 쓴 예시. 꼬리 질문·내 답변은 접어 둔다.
+ * 고른 답변의 결과 (가운데 칸, 작성 칸 자리에 뜬다).
+ * 점수 링 + 총평 → 좋았던 점 / 고칠 점 → 예시 답변. 꼬리 질문·내 답변은 접어 둔다.
+ * 작성 칸으로 돌아가려면 오른쪽 '답변 기록' 옆 + 버튼을 누른다.
  */
-function AnswerDrawer({ index, attempt, record, onClose }: { index: number | null; attempt: Attempt | null; record: QuestionRecord; onClose: () => void }) {
-  const tag = record.tag
-  // 펼친 칸은 그 답변에서만 유지 (다른 답변을 열면 접힌 상태)
-  const [opened, setOpened] = useState<{ i: number; k: 'follow' | 'answer' } | null>(null)
-  const more = opened && opened.i === index ? opened.k : null
-  useEffect(() => {
-    if (index === null) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [index, onClose])
-
-  const d = attempt ? mockDetail(attempt.feedback, attempt.answer, tag) : null
+function ResultView({ index, attempt, tag }: { index: number; attempt: Attempt; tag: Tag }) {
+  const [more, setMore] = useState<'follow' | 'answer' | null>(null)
+  const d = mockDetail(attempt.feedback, tag)
 
   return (
-    <AnimatePresence>
-      {attempt && d && index !== null && (
-        <motion.div className="fixed inset-0 z-20" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-          <button type="button" aria-label="닫기" onClick={onClose} className="absolute inset-0 bg-black/50" />
-          <motion.aside
-            role="dialog"
-            aria-modal="true"
-            aria-label={`${index + 1}번째 답변`}
-            initial={{ x: 40, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 40, opacity: 0 }}
-            transition={{ duration: 0.3, ease: EASE }}
-            className="absolute inset-y-0 right-0 flex w-[min(520px,100vw)] flex-col border-l border-line bg-ink-2"
-          >
-            {/* 머리 */}
-            <div className="flex items-center justify-between px-7 pt-5">
-              <p className="text-[13px] text-mute">
-                {index + 1}번째 답변 · {fullDate(attempt.date)}
-              </p>
-              <button
-                type="button"
-                aria-label="창 닫기"
-                onClick={onClose}
-                className="-mr-2 grid h-9 w-9 place-items-center rounded-full text-mute transition-colors hover:bg-tint/[0.06] hover:text-paper"
-              >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
-                  <path d="M6 6l12 12M18 6 6 18" />
-                </svg>
-              </button>
-            </div>
+    <section aria-label={`${index + 1}번째 답변 결과`} className="mt-8">
+      {/* 점수 + 총평 (상자 없이) */}
+      <div className="flex gap-5">
+        <ScoreRing score={attempt.feedback.score} size={56} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[16px] leading-relaxed font-medium text-paper">{d.summary}</p>
+        </div>
+      </div>
 
-            <div className="flex-1 overflow-y-auto px-7 pb-8">
-              {/* 점수 + STAR + 총평 */}
-              <div className="pt-4 pb-8">
-                <div className="flex items-end">
-                  <p className="flex items-end gap-2">
-                    <span className="font-display text-[56px] leading-[0.9] font-semibold text-accent-lg tabular-nums">{attempt.feedback.score}</span>
-                    <span className="pb-1 text-[13px] text-mute">/ 100</span>
-                  </p>
-                </div>
-                <p className="mt-5 text-[16px] leading-relaxed font-medium text-paper">{d.summary}</p>
-                {/* STAR 점검: 총평 바로 아래, 이름까지 한 줄 */}
-                <ul aria-label="STAR 점검" className="mt-5 grid grid-cols-4 gap-2">
-                  {d.star.map((x) => (
-                    <li key={x.key} className={`flex items-center justify-center gap-1.5 rounded-lg border py-2 text-[13px] ${x.ok ? 'border-grass/70 text-paper' : 'border-line text-mute'}`}>
-                      <span className={`font-display font-semibold ${x.ok ? 'text-lime' : 'text-dim'}`}>{x.key}</span>
-                      {x.label}
-                      <span className="sr-only">{x.ok ? '충분' : '부족'}</span>
+      {/* 좋았던 점 · 고칠 점 */}
+      {[
+        ['이런 점이 좋았어요.', d.good],
+        ['이 부분을 고치면 좋겠어요.', d.next],
+      ].map(([k, v]) => (
+        <div key={k} className="mt-8">
+          <SectionTitle>{k}</SectionTitle>
+          <p className="mt-2.5 text-[15px] leading-relaxed text-soft">{v}</p>
+        </div>
+      ))}
+
+      {/* 예시 답변 */}
+      <div className="mt-8">
+        <SectionTitle>이렇게 바꿔 보면 좋겠어요.</SectionTitle>
+        <p className="mt-2.5 text-[15px] leading-relaxed text-soft">{d.rewrite}</p>
+      </div>
+
+      {/* 접어 둔 것: 내 답변 · 꼬리 질문 */}
+      <div className="mt-6 border-t border-line pt-5">
+        <div className="flex gap-5 text-[13px]">
+          {(
+            [
+              ['answer', '내 답변 보기'],
+              ['follow', '예상 꼬리 질문'],
+            ] as const
+          ).map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              aria-expanded={more === k}
+              onClick={() => setMore(more === k ? null : k)}
+              className={`flex items-center gap-1.5 transition-colors ${more === k ? 'text-paper' : 'text-mute hover:text-soft'}`}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className={`h-3.5 w-3.5 transition-transform ${more === k ? 'rotate-90' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <path d="m9 5 7 7-7 7" />
+              </svg>
+              {label}
+            </button>
+          ))}
+        </div>
+        <AnimatePresence initial={false}>
+          {more && (
+            <motion.div
+              key={more}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.25, ease: EASE }}
+              className="overflow-hidden"
+            >
+              {more === 'follow' ? (
+                <ol className="space-y-2 pt-4 text-[14px] leading-relaxed text-soft">
+                  {d.followUps.map((q, i) => (
+                    <li key={q} className="flex items-baseline gap-3">
+                      <span className="text-mute tabular-nums">{i + 1}</span>
+                      <span className="min-w-0 flex-1">{q}</span>
                     </li>
                   ))}
-                </ul>
-              </div>
+                </ol>
+              ) : (
+                <p className="pt-4 text-[15px] leading-relaxed whitespace-pre-wrap text-soft">{attempt.answer}</p>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </section>
+  )
+}
 
-              {/* 핵심 피드백: 아래 '이렇게 바꿔 보면'과 같은 모양(섹션명 → 문단) */}
-              {[
-                ['이런 점이 좋았어요.', d.good],
-                ['이 부분을 고치면 좋겠어요.', d.next],
-              ].map(([k, v]) => (
-                <div key={k} className="border-t border-line py-7">
-                  <p className="text-[13px] text-mute">{k}</p>
-                  <p className="mt-3 text-[15px] leading-relaxed text-soft">{v}</p>
-                </div>
-              ))}
-
-              {/* 고쳐 쓴 예시 */}
-              <div className="border-t border-line py-7">
-                <p className="text-[13px] text-mute">이렇게 바꿔 보면 좋겠어요.</p>
-                <p className="mt-3 text-[15px] leading-relaxed text-soft">{d.rewrite}</p>
-              </div>
-
-              {/* 접어 둔 것: 꼬리 질문 · 내 답변 */}
-              <div className="border-t border-line pt-5">
-                <div className="flex gap-5 text-[13px]">
-                  {(
-                    [
-                      ['answer', '내 답변 보기'],
-                      ['follow', '예상 꼬리 질문'],
-                    ] as const
-                  ).map(([k, label]) => (
-                    <button
-                      key={k}
-                      type="button"
-                      aria-expanded={more === k}
-                      onClick={() => setOpened(more === k ? null : { i: index, k })}
-                      className={`flex items-center gap-1.5 transition-colors ${more === k ? 'text-paper' : 'text-mute hover:text-soft'}`}
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        className={`h-3.5 w-3.5 transition-transform ${more === k ? 'rotate-90' : ''}`}
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden
-                      >
-                        <path d="m9 5 7 7-7 7" />
-                      </svg>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                <AnimatePresence initial={false}>
-                  {more && (
-                    <motion.div
-                      key={more}
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.25, ease: EASE }}
-                      className="overflow-hidden"
-                    >
-                      {more === 'follow' ? (
-                        <div className="pt-4">
-                          <ol className="space-y-2 text-[14px] leading-relaxed text-soft">
-                            {d.followUps.map((q, i) => (
-                              <li key={q} className="flex items-baseline gap-3">
-                                <span className="text-mute tabular-nums">{i + 1}</span>
-                                <span className="min-w-0 flex-1">{q}</span>
-                              </li>
-                            ))}
-                          </ol>
-                        </div>
-                      ) : (
-                        <p className="pt-4 text-[15px] leading-relaxed whitespace-pre-wrap text-soft">{attempt.answer}</p>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-          </motion.aside>
-        </motion.div>
-      )}
-    </AnimatePresence>
+/** 결과 안 섹션 제목: 형광 점 + 진한 글씨 (흰 배경에서도 형광이 살고, 글씨는 잘 읽히게) */
+function SectionTitle({ children }: { children: string }) {
+  return (
+    <h3 className="flex items-center gap-2 text-[13px] font-medium text-paper">
+      <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-grass" />
+      {children}
+    </h3>
   )
 }
 
@@ -465,32 +425,5 @@ function Composer({ value, onChange, onSubmit, submitting }: { value: string; on
         </div>
       </div>
     </form>
-  )
-}
-
-/** 질문별 메모: 쓰는 대로 자동 저장 */
-function Memo({ id }: { id: number }) {
-  const [text, setText] = useState(() => readMemo(id))
-  const [saved, setSaved] = useState(false)
-  return (
-    <section aria-label="메모" className="mt-8">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-[14px] font-medium text-paper">메모</h2>
-        <span className={`text-[12px] text-mute transition-opacity ${saved ? 'opacity-100' : 'opacity-0'}`}>저장됨</span>
-      </div>
-      <textarea
-        aria-label="메모"
-        rows={4}
-        placeholder="이 질문에 대해 기억할 것을 적어 두세요."
-        value={text}
-        onChange={(e) => {
-          setText(e.target.value)
-          saveMemo(id, e.target.value)
-          setSaved(true)
-        }}
-        onBlur={() => setSaved(false)}
-        className="mt-3 block w-full resize-y rounded-xl border border-line bg-transparent px-3.5 py-3 text-[14px] leading-relaxed text-soft outline-none transition-colors placeholder:text-dim focus:border-mute"
-      />
-    </section>
   )
 }

@@ -1,42 +1,44 @@
 import { useSyncExternalStore } from 'react'
 
 /**
- * 질문 북마크 (목업): 이 브라우저(localStorage)에만 저장.
+ * 북마크 (목업): 이 브라우저(localStorage)에만 저장. 질문(텍스트 면접)과 화상 면접 기록을 따로 둔다.
  * TODO: 서버 API가 생기면 그쪽으로 옮긴다.
  */
-const KEY = 'prepair-bookmarks'
-const listeners = new Set<() => void>()
-
-function read(): Set<number> {
+function createBookmarkStore(key: string) {
+  const listeners = new Set<() => void>()
+  let ids: Set<number>
   try {
-    const raw = localStorage.getItem(KEY)
-    return new Set(raw ? (JSON.parse(raw) as number[]) : [])
+    const raw = localStorage.getItem(key)
+    ids = new Set(raw ? (JSON.parse(raw) as number[]) : [])
   } catch {
-    return new Set()
+    ids = new Set()
   }
-}
 
-let ids = read()
-
-export function toggleBookmark(id: number) {
-  const next = new Set(ids)
-  if (next.has(id)) next.delete(id)
-  else next.add(id)
-  ids = next
-  try {
-    localStorage.setItem(KEY, JSON.stringify([...ids]))
-  } catch {
-    /* 저장이 막힌 환경이면 이번 방문 동안만 유지 */
+  const toggle = (id: number) => {
+    const next = new Set(ids)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    ids = next
+    try {
+      localStorage.setItem(key, JSON.stringify([...ids]))
+    } catch {
+      /* 저장이 막힌 환경이면 이번 방문 동안만 유지 */
+    }
+    listeners.forEach((fn) => fn())
   }
-  listeners.forEach((fn) => fn())
+  const subscribe = (fn: () => void) => {
+    listeners.add(fn)
+    return () => listeners.delete(fn)
+  }
+  /** 북마크한 id 집합 (바뀌면 다시 그린다) */
+  const use = () => useSyncExternalStore(subscribe, () => ids)
+  return { toggle, use }
 }
 
-function subscribe(fn: () => void) {
-  listeners.add(fn)
-  return () => listeners.delete(fn)
-}
+const questions = createBookmarkStore('prepair-bookmarks')
+const interviews = createBookmarkStore('prepair-interview-bookmarks')
 
-/** 북마크한 질문 id 집합 (바뀌면 다시 그린다) */
-export function useBookmarks() {
-  return useSyncExternalStore(subscribe, () => ids)
-}
+export const toggleBookmark = questions.toggle
+export const useBookmarks = questions.use
+export const toggleInterviewBookmark = interviews.toggle
+export const useInterviewBookmarks = interviews.use

@@ -38,7 +38,7 @@ export function KakaoButton({ children }: { children: ReactNode }) {
 
 /** 밑줄형 입력칸 (로그인·회원가입 공통). bareInput은 밑줄을 바깥 줄이 그릴 때 */
 export const bareInput = 'w-full bg-transparent px-0 py-2.5 text-[16px] text-paper outline-none placeholder:text-dim'
-export const lineInput = `${bareInput} border-b border-line transition-colors focus:border-lime`
+export const lineInput = `${bareInput} border-b border-line transition-colors focus:border-paper`
 
 export const primaryButtonClass =
   'w-full rounded-xl bg-paper py-3 text-sm font-semibold text-ink transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30'
@@ -51,13 +51,9 @@ export function EyeToggle({ shown, onToggle }: { shown: boolean; onToggle: () =>
       onClick={onToggle}
       aria-label={shown ? '비밀번호 숨기기' : '비밀번호 보기'}
       aria-pressed={shown}
-      className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-mute transition-colors hover:text-paper"
+      className="h-8 shrink-0 px-1 text-[13px] whitespace-nowrap text-mute transition-colors hover:text-paper"
     >
-      <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" />
-        <circle cx="12" cy="12" r="3" />
-        {shown && <path d="M4 4l16 16" />}
-      </svg>
+      {shown ? '숨기기' : '보기'}
     </button>
   )
 }

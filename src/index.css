@@ -100,8 +100,18 @@ html.lenis body {
 .animate-marquee {
   animation: marquee 40s linear infinite;
 }
+/* 메인 질문: 가만히 있을 때 살짝 떠서 둥실거린다 */
+@keyframes bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  30% { transform: translateY(-4px) rotate(-0.25deg); }
+  70% { transform: translateY(2px) rotate(0.2deg); }
+}
+.bob {
+  animation: bob 5s ease-in-out infinite;
+}
 @media (prefers-reduced-motion: reduce) {
   .animate-marquee { animation: none; }
+  .bob { animation: none; }
 }
 
 /* 얇은 스크롤바 (서비스 화면 목록용): 4px, 밝은 회색 */

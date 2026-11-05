@@ -45,7 +45,7 @@ export function AppHeader() {
         <Link to="/app" className="font-display text-base font-semibold tracking-tight">
           PREPAIR<span className="text-lime">.</span>
         </Link>
-        <nav className="flex items-center gap-5 text-[13px] text-mute">
+        <nav className="flex items-center gap-5 text-[13px] text-soft">
           <Link to="/app/me" className="transition-colors hover:text-paper">
             마이페이지
           </Link>

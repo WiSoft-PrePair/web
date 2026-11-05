@@ -1,10 +1,11 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { useAppearance } from '../components/appearance'
-import { AppShell, PageTitle } from '../components/AppShell'
+import { AppShell } from '../components/AppShell'
 import { primaryButtonClass } from '../components/auth'
+import { TAGS, type Tag } from '../data/questions'
 
 /** 면접 시작 시 넘기는 것: 켜 둔 카메라·마이크 + 고른 질문 수 */
-export type Media = { cam: MediaStream | null; mic: MediaStream; count: number }
+export type Media = { cam: MediaStream | null; mic: MediaStream; count: number; type: Tag }
 
 /** 질문 수와 예상 시간 (질문당 약 2분) */
 const COUNTS = [3, 5, 7] as const
@@ -42,6 +43,8 @@ export default function InterviewSetup({ onStart }: { onStart: (m: Media) => voi
   const [heard, setHeard] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const [count, setCount] = useState<number>(5)
+  // 질문 유형: 하나만 고른다. 그 유형으로 첫 질문을 하고, 답변에 맞춰 꼬리 질문으로 이어진다
+  const [type, setType] = useState<Tag>('직무')
 
   // 처음(과 '다시 시도') 권한 요청: 한 번에 요청하고, 실패하면 하나씩 다시
   useEffect(() => {
@@ -153,42 +156,53 @@ export default function InterviewSetup({ onStart }: { onStart: (m: Media) => voi
   const start = () => {
     if (!mic || !ready) return
     handedOff.current = true
-    onStart({ cam, mic, count })
+    onStart({ cam, mic, count, type })
   }
 
   const field = 'h-11 w-full appearance-none rounded-xl border border-line bg-ink pr-9 pl-3.5 text-[14px] text-paper outline-none transition-colors focus:border-mute disabled:opacity-40'
 
   return (
     <AppShell wide>
-      <PageTitle eyebrow="VIDEO INTERVIEW" title="면접 준비" />
+      <h1 className="sr-only">면접 준비</h1>
 
-      <div className="mt-8 grid gap-6 md:grid-cols-[minmax(0,1fr)_300px] md:gap-8 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_360px]">
-        {/* 카메라 미리보기: 최소 16:9, 옆 패널이 더 길면 그 높이까지 늘리고 영상은 꽉 채워 자른다 */}
-        <div className="relative overflow-hidden rounded-3xl border border-line bg-ink-2">
-          <div className="aspect-video" aria-hidden />
-          <video ref={video} autoPlay playsInline muted className={`absolute inset-0 h-full w-full -scale-x-100 object-cover ${cam ? '' : 'hidden'}`} />
-          {!cam && (
-            <div className="absolute inset-0 grid place-items-center px-6 text-center">
-              <p className="text-[14px] text-mute">{camStatus === 'loading' ? '카메라를 켜는 중…' : camStatus === 'denied' ? '카메라 권한이 꺼져 있어요' : '카메라를 찾지 못했어요'}</p>
+      <div className="mx-auto grid max-w-[1040px] gap-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12 lg:pt-4">
+        {/* 왼쪽: 기기 세팅 (카메라 화면 + 카메라·마이크·스피커) */}
+        <section aria-label="기기 세팅" className="min-w-0">
+          <h2 className="mb-3 text-[14px] font-medium text-paper">기기 확인</h2>
+          <div className="relative overflow-hidden rounded-2xl border border-line bg-ink-2">
+            <div className="aspect-video" aria-hidden />
+            <video ref={video} autoPlay playsInline muted className={`absolute inset-0 h-full w-full -scale-x-100 object-cover ${cam ? '' : 'hidden'}`} />
+            {!cam && (
+              <div className="absolute inset-0 grid place-items-center px-6 text-center">
+                <p className="text-[14px] text-mute">{camStatus === 'loading' ? '카메라를 켜는 중…' : camStatus === 'denied' ? '카메라 권한이 꺼져 있어요' : '카메라를 찾지 못했어요'}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-5 grid gap-5 sm:grid-cols-2">
+            <div>
+              <Field label="카메라" right={<StatusText ok={cam !== null} text={cam ? '켜짐' : camStatus === 'loading' ? '확인 중' : '없이 진행해요'} />}>
+                <Select value={deviceOf(cam)} onChange={(id) => switchDevice('cam', id)} disabled={cams.length === 0} className={field} scheme={mode}>
+                  {cams.length === 0 && <option value="">카메라 없음</option>}
+                  {cams.map((d, i) => (
+                    <option key={d.deviceId} value={d.deviceId}>
+                      {d.label || `카메라 ${i + 1}`}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <div className="mt-3 flex h-6 items-center justify-between text-[13px]">
+                <span className="text-mute">스피커</span>
+                <button type="button" onClick={playChime} className="flex items-center gap-1.5 text-soft transition-colors hover:text-paper">
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M11 5 6 9H3v6h3l5 4V5Z" />
+                    <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" />
+                  </svg>
+                  소리 들어보기
+                </button>
+              </div>
             </div>
-          )}
-        </div>
-
-        {/* 점검 */}
-        <div className="flex flex-col">
-          <div className="space-y-5">
-            <Field label="카메라">
-              <Select value={deviceOf(cam)} onChange={(id) => switchDevice('cam', id)} disabled={cams.length === 0} className={field} scheme={mode}>
-                {cams.length === 0 && <option value="">카메라 없음</option>}
-                {cams.map((d, i) => (
-                  <option key={d.deviceId} value={d.deviceId}>
-                    {d.label || `카메라 ${i + 1}`}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-
-            <Field label="마이크">
+            <Field label="마이크" right={<StatusText ok={ready} text={micStatus !== 'ok' && micStatus !== 'loading' ? '사용할 수 없어요' : heard ? '확인됨' : '아무 말이나 해 보세요'} />}>
               <Select value={deviceOf(mic)} onChange={(id) => switchDevice('mic', id)} disabled={mics.length === 0} className={field} scheme={mode}>
                 {mics.length === 0 && <option value="">마이크 없음</option>}
                 {mics.map((d, i) => (
@@ -203,21 +217,31 @@ export default function InterviewSetup({ onStart }: { onStart: (m: Media) => voi
                 ))}
               </div>
             </Field>
+          </div>
+        </section>
 
-            <Field label="스피커">
-              <button
-                type="button"
-                onClick={playChime}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-line text-[14px] text-paper transition-colors hover:border-mute"
-              >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M11 5 6 9H3v6h3l5 4V5Z" />
-                  <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" />
-                </svg>
-                소리 들어보기
-              </button>
-            </Field>
+        {/* 오른쪽: 질문 설정 */}
+        <section aria-label="질문 설정" className="flex flex-col">
+          <h2 className="mb-3 text-[14px] font-medium text-paper">면접 설정</h2>
+          <Field label="질문 유형">
+            <div role="radiogroup" aria-label="질문 유형" className="grid h-11 grid-cols-4 gap-1 rounded-xl border border-line bg-ink p-1">
+              {TAGS.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  role="radio"
+                  aria-checked={type === t}
+                  onClick={() => setType(t)}
+                  className={`rounded-lg text-[13px] whitespace-nowrap transition-colors ${type === t ? 'bg-paper font-medium text-ink' : 'text-soft hover:bg-tint/[0.05]'}`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </Field>
+          <p className="mt-2.5 text-[12px] leading-relaxed text-mute">{type} 질문으로 시작해서, 내 답변에 맞춰 꼬리 질문이 이어져요.</p>
 
+          <div className="mt-6">
             <Field label="질문 수">
               <div role="radiogroup" aria-label="질문 수" className="grid h-11 grid-cols-3 gap-1 rounded-xl border border-line bg-ink p-1">
                 {COUNTS.map((n) => (
@@ -239,17 +263,11 @@ export default function InterviewSetup({ onStart }: { onStart: (m: Media) => voi
             </Field>
           </div>
 
-          {/* 영상이 더 길면 남는 공간은 여기로: 상태·시작 버튼이 함께 영상 아래끝에 붙는다 */}
+          {/* 왼쪽이 더 길면 남는 공간은 여기로: 시작 버튼이 왼쪽 아래끝에 맞춰진다 */}
           <div className="min-h-7 flex-1" />
 
-          {/* 상태 */}
-          <ul className="space-y-2.5 text-[13px]">
-            <Check ok={cam !== null} label="카메라" text={cam ? '켜짐' : camStatus === 'loading' ? '확인 중' : '없이 진행해요'} />
-            <Check ok={ready} label="마이크" text={micStatus !== 'ok' && micStatus !== 'loading' ? '사용할 수 없어요' : heard ? '확인됨' : '아무 말이나 해 보세요'} />
-          </ul>
-
           {blocked && (
-            <div className="mt-5 rounded-xl bg-tint/[0.04] px-4 py-3.5 text-[13px] leading-relaxed text-soft">
+            <div className="rounded-xl bg-tint/[0.04] px-4 py-3.5 text-[13px] leading-relaxed text-soft">
               {micStatus === 'unsupported' ? (
                 '이 브라우저에서는 카메라·마이크를 쓸 수 없어요. 최신 Chrome이나 Safari로 열어 주세요.'
               ) : (
@@ -266,18 +284,35 @@ export default function InterviewSetup({ onStart }: { onStart: (m: Media) => voi
           <button type="button" onClick={start} disabled={!ready} className={`mt-5 h-11 !py-0 ${primaryButtonClass}`}>
             면접 시작
           </button>
-        </div>
+        </section>
       </div>
     </AppShell>
   )
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({ label, right, children }: { label: string; right?: ReactNode; children: ReactNode }) {
   return (
     <div>
-      <p className="mb-2 text-[13px] text-mute">{label}</p>
+      <div className="mb-2 flex items-center justify-between text-[13px]">
+        <span className="text-mute">{label}</span>
+        {right}
+      </div>
       {children}
     </div>
+  )
+}
+
+/** 이름 줄 오른쪽 상태: 확인되면 체크 + 진한 글씨 */
+function StatusText({ ok, text }: { ok: boolean; text: string }) {
+  return (
+    <span className={`flex items-center gap-1 text-[12px] ${ok ? 'text-paper' : 'text-mute'}`}>
+      {ok && (
+        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="m5 12 5 5 9-10" />
+        </svg>
+      )}
+      {text}
+    </span>
   )
 }
 
@@ -314,24 +349,6 @@ function Select({
         <path d="m6 9 6 6 6-6" />
       </svg>
     </div>
-  )
-}
-
-function Check({ ok, label, text }: { ok: boolean; label: string; text: string }) {
-  return (
-    <li className="flex items-center justify-between">
-      <span className="flex items-center gap-2 text-soft">
-        <span className={`grid h-4 w-4 place-items-center rounded-full ${ok ? 'bg-grass text-(--accent-on)' : 'bg-tint/[0.08]'}`} aria-hidden>
-          {ok && (
-            <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m5 12 5 5 9-10" />
-            </svg>
-          )}
-        </span>
-        {label}
-      </span>
-      <span className={ok ? 'text-paper' : 'text-mute'}>{text}</span>
-    </li>
   )
 }
 

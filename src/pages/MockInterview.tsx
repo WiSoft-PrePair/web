@@ -128,12 +128,12 @@ function Live({ media }: { media: Media }) {
           </RoundButton>
           <button
             type="button"
-            onClick={() => (last ? navigate('/app') : setIndex((i) => i + 1))}
+            onClick={() => (last ? navigate('/app/interview') : setIndex((i) => i + 1))}
             className="h-12 rounded-full bg-paper px-6 text-sm font-semibold text-ink transition-opacity hover:opacity-90"
           >
             {last ? '면접 마치기' : '다음 질문'}
           </button>
-          <button type="button" onClick={() => navigate('/app')} className="h-12 rounded-full border border-line px-5 text-sm text-mute transition-colors hover:border-[#ff5a5a] hover:text-[#ff5a5a]">
+          <button type="button" onClick={() => navigate('/app/interview')} className="h-12 rounded-full border border-line px-5 text-sm text-mute transition-colors hover:border-[#ff5a5a] hover:text-[#ff5a5a]">
             나가기
           </button>
         </div>

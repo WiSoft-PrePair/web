@@ -23,9 +23,9 @@ export function ChoiceCards({
             role={multiple ? 'checkbox' : 'radio'}
             aria-checked={on}
             onClick={() => onPick(o.value)}
-            className={`rounded-xl border px-4 py-3 text-center transition-colors ${on ? 'border-lime' : 'border-line hover:border-mute'}`}
+            className={`rounded-xl border px-4 py-3 text-center transition-colors ${on ? 'border-paper' : 'border-line hover:border-mute'}`}
           >
-            <span className={`text-[15px] ${on ? 'font-medium text-lime' : 'text-soft'}`}>{o.label}</span>
+            <span className={`text-[15px] ${on ? 'font-medium text-paper' : 'text-soft'}`}>{o.label}</span>
             {o.sub && <span className="ml-1.5 text-[13px] text-mute">{o.sub}</span>}
           </button>
         )

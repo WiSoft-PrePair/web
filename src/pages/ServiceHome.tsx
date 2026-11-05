@@ -1,7 +1,8 @@
-import { motion, useMotionValue, useSpring } from 'motion/react'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { motion } from 'motion/react'
+import { type ReactNode, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { Link } from 'react-router'
 import { AppHeader, ThemeRoot } from '../components/AppShell'
+import { ScoreRing } from '../components/ScoreRing'
 import { fullDate, QUESTIONS } from '../data/questions'
 
 const EASE = [0.22, 1, 0.36, 1] as const
@@ -33,10 +34,14 @@ export default function ServiceHome() {
 const ACTIONS = [
   { label: '텍스트 면접', to: '/app/answer' },
   { label: '화상 면접', to: '/app/interview' },
+  { label: '맞춤 면접', to: '/app/custom' },
   { label: '공고 관리', to: '/app/jobs' },
+  { label: '리워드 샵', to: '/app/shop' },
 ]
 
 /** 가운데에 오늘의 질문, 그 아래 텍스트 바로가기 3개 */
+const NICKNAME = '우민' // 목업
+
 function TodayQuestion() {
   const today = RECORDS[0]
 
@@ -45,119 +50,46 @@ function TodayQuestion() {
       aria-labelledby="today-title"
       className="flex flex-col items-center text-center"
     >
-      {/* 영문 표시는 Geist(대문자·넓은 자간), 날짜·태그는 본문 글꼴(Pretendard·기본 자간)으로 나눠 한 줄에 글꼴이 섞이지 않게 */}
-      <p className="text-[12px]">
-        <span className="font-display font-medium tracking-[0.08em] text-grass">TODAY&apos;S QUESTION</span>
-        <span className="ml-1 text-mute">
-          · {fullDate(today.date)} · {today.tag}
-        </span>
+      {/* 질문 위 인사 한마디 (TODO: 닉네임은 회원 API에서) */}
+      <p className="bob text-[14px] text-mute">
+        <span className="font-medium text-paper">{NICKNAME}님,</span> 오늘도 한 문제만 같이 풀어 볼까요?
       </p>
       <OneLineTitle id="today-title" text={today.question} />
 
-      <ActionLinks />
+      <ActionTiles />
     </section>
   )
 }
 
-/** 점·알약 움직임: 하나의 스프링으로 이어서 움직여 끊김이 없게 (살짝 늦게 따라오는 정도) */
-const PILL_SPRING = { stiffness: 320, damping: 30, mass: 0.7 }
+/** 바로가기 아이콘 (24px 선 아이콘) */
+const ICONS: Record<string, ReactNode> = {
+  '텍스트 면접': <path d="M4 20h4L19 9l-4-4L4 16v4Z M13.5 6.5l4 4" />,
+  '화상 면접': <path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h9A1.5 1.5 0 0 1 15 7.5v9a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 3 16.5v-9Z M15 10.5l6-3.5v10l-6-3.5" />,
+  '맞춤 면접': <path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z M14 3v5h5 M9.5 13l1.8 1.8L15 11" />,
+  '공고 관리': <path d="M4 8h16v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8Z M9 8V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V8 M4 13h16" />,
+  '리워드 샵': <path d="M4 10h16v10H4V10Z M3 7h18v3H3V7Z M12 7v13 M12 7c-1.5-3-5-3-5-1s3 1 5 1Zm0 0c1.5-3 5-3 5-1s-3 1-5 1Z" />,
+}
 
 /**
- * 텍스트 바로가기 3개 (| 구분).
- * 마우스가 들어오면 대표색 점이 커서처럼 따라오다가, 버튼 위에서는 알약으로 부드럽게 커져 글자 뒤에 깔린다.
- * 글자색은 알약이 거의 덮었을 때 바뀌도록 살짝 늦게. 터치 기기는 hover가 없으니 글자만 보인다.
+ * 바로가기 5개: 카드. 아이콘은 왼쪽 위, 이름은 왼쪽 아래.
+ * 커서를 올리면 아래에서부터 대표색이 차올라 카드가 물들고, 글자·아이콘은 그 위에서 읽히는 색으로 바뀐다.
  */
-function ActionLinks() {
-  const navigate = useNavigate()
-  const nav = useRef<HTMLElement>(null)
-  const buttons = useRef<(HTMLButtonElement | null)[]>([])
-  const [active, setActive] = useState<number | null>(null)
-  const [visible, setVisible] = useState(false)
-
-  // 목표값(바로 바뀜) → 스프링(따라감). 마우스 이동마다 다시 그리지 않는다.
-  const tx = useMotionValue(0)
-  const ty = useMotionValue(0)
-  const tw = useMotionValue(16)
-  const th = useMotionValue(16)
-  const x = useSpring(tx, PILL_SPRING)
-  const y = useSpring(ty, PILL_SPRING)
-  const width = useSpring(tw, PILL_SPRING)
-  const height = useSpring(th, PILL_SPRING)
-
-  const setTarget = (nx: number, ny: number, nw: number, nh: number, jump = false) => {
-    tx.set(nx)
-    ty.set(ny)
-    tw.set(nw)
-    th.set(nh)
-    if (jump) [x, y, width, height].forEach((m, i) => m.jump([nx, ny, nw, nh][i]))
-  }
-  const toButton = (i: number) => {
-    const n = nav.current?.getBoundingClientRect()
-    const r = buttons.current[i]?.getBoundingClientRect()
-    if (!n || !r) return
-    setActive(i)
-    setTarget(r.left - n.left - 12, r.top - n.top - 5, r.width + 24, r.height + 10)
-  }
-  const toPoint = (clientX: number, clientY: number, jump = false) => {
-    const n = nav.current?.getBoundingClientRect()
-    if (!n) return
-    if (active !== null) setActive(null)
-    setTarget(clientX - n.left - 8, clientY - n.top - 8, 16, 16, jump)
-  }
-  const hide = () => {
-    setActive(null)
-    setVisible(false)
-  }
-
+function ActionTiles() {
   return (
-    <nav
-      ref={nav}
-      aria-label="바로가기"
-      data-cursor-none
-      onMouseEnter={(e) => {
-        // 들어온 자리에서 바로 나타나게 (이전 위치에서 미끄러져 오지 않게)
-        toPoint(e.clientX, e.clientY, true)
-        setVisible(true)
-      }}
-      onMouseMove={(e) => {
-        const i = buttons.current.findIndex((b) => b?.contains(e.target as Node))
-        if (i >= 0) {
-          if (i !== active) toButton(i)
-        } else toPoint(e.clientX, e.clientY)
-      }}
-      onMouseLeave={hide}
-      className="relative mt-5 flex items-center justify-center gap-5 px-6 py-2 text-[15px] font-medium"
-    >
-      <motion.span
-        aria-hidden
-        className="pointer-events-none absolute top-0 left-0 rounded-full bg-grass"
-        style={{ x, y, width, height }}
-        initial={false}
-        animate={{ opacity: visible ? 1 : 0 }}
-        transition={{ duration: 0.2 }}
-      />
-      {ACTIONS.map(({ label, to }, i) => (
-        <span key={label} className="relative flex items-center gap-5">
-          {i > 0 && <span aria-hidden className="h-3.5 w-px bg-line" />}
-          <button
-            ref={(el) => {
-              buttons.current[i] = el
-            }}
-            type="button"
-            onClick={() => navigate(to)}
-            onFocus={() => {
-              const n = nav.current?.getBoundingClientRect()
-              const r = buttons.current[i]?.getBoundingClientRect()
-              if (n && r && !visible) setTarget(r.left - n.left - 12, r.top - n.top - 5, r.width + 24, r.height + 10, true)
-              setVisible(true)
-              toButton(i)
-            }}
-            onBlur={hide}
-            className={`relative py-1 outline-none transition-colors ${active === i ? 'text-(--accent-on) delay-100 duration-300' : 'text-soft duration-200'}`}
-          >
-            {label}
-          </button>
-        </span>
+    <nav aria-label="바로가기" className="mt-9 grid w-full max-w-[720px] grid-cols-5 gap-2 max-sm:grid-cols-3">
+      {ACTIONS.map(({ label, to }) => (
+        <Link
+          key={to}
+          to={to}
+          className="group relative isolate flex h-[92px] flex-col items-start justify-between overflow-hidden rounded-xl border border-line p-4 text-left text-soft transition-[color,border-color] duration-300 hover:border-grass hover:text-(--accent-on)"
+        >
+          {/* 차오르는 대표색 */}
+          <span aria-hidden className="absolute inset-0 -z-10 origin-bottom scale-y-0 bg-grass transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-y-100" />
+          <svg viewBox="0 0 24 24" className="h-5 w-5 text-mute transition-colors duration-300 group-hover:text-(--accent-on)" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            {ICONS[label]}
+          </svg>
+          <span className="text-[14px] font-medium">{label}</span>
+        </Link>
       ))}
     </nav>
   )
@@ -189,7 +121,7 @@ function OneLineTitle({ id, text }: { id: string; text: string }) {
     <h1
       ref={ref}
       id={id}
-      className="mt-4 w-[min(1120px,calc(100vw-2*var(--side)))] leading-[1.35] font-semibold text-soft tracking-tight text-balance"
+      className="bob mt-4 w-[min(1120px,calc(100vw-2*var(--side)))] leading-[1.35] font-semibold text-soft tracking-tight text-balance"
     >
       {text}
     </h1>
@@ -208,24 +140,27 @@ function QuestionHistory() {
         <h2 id="history-title" className="text-[15px] font-medium">
           이 질문, 지금 다시 답하면?
         </h2>
-        <Link to="/app/answer" className="text-[13px] text-mute transition-colors hover:text-paper">
-          View all
+        <Link to="/app/answer" className="-mr-1 flex items-center text-[13px] text-soft transition-colors hover:text-paper">
+          전체 보기
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="m9 6 6 6-6 6" />
+          </svg>
         </Link>
       </div>
 
-      <ul className="mt-4 border-t border-line">
+      <ul className="mt-[10px] border-t border-line">
         {RECORDS.slice(1).filter((r) => r.score !== undefined).slice(0, 3).map((r) => {
           const pending = r.score === undefined
           return (
             <li key={r.id} className="border-b border-line">
-              <Link to={`/app/answer/${r.id}`} className="group flex w-full items-center gap-4 py-3.5 text-left md:gap-6">
-                <span className="w-[104px] shrink-0 text-[13px] text-mute tabular-nums">{fullDate(r.date)}</span>
-                <span className="w-12 shrink-0 text-[12px] text-mute sm:w-14">{r.tag}</span>
+              <Link to={`/app/answer/${r.id}`} className="group flex w-full items-center gap-4 py-2.5 text-left">
+                <span className="shrink-0 text-[13px] text-mute tabular-nums">{fullDate(r.date)}</span>
+                <span className="w-[52px] shrink-0 rounded-full border border-line py-[3px] text-center text-[11px] text-mute">{r.tag}</span>
                 <span className="min-w-0 flex-1 truncate text-[15px] text-soft transition-colors group-hover:text-paper">{r.question}</span>
                 {pending ? (
                   <span className="shrink-0 rounded-full border border-lime px-2.5 py-0.5 text-[12px] text-lime">답변하기</span>
                 ) : (
-                  <span className="w-8 shrink-0 text-right font-display text-[15px] font-medium text-soft tabular-nums">{r.score}</span>
+                  <ScoreRing score={r.score} size={30} />
                 )}
               </Link>
             </li>
@@ -279,13 +214,16 @@ function buildGrass() {
   let streak = 0
   for (; mockCount(day) > 0; day.setDate(day.getDate() - 1)) streak++
 
-  return { weeks, months, streak }
+  // 전체 답변 수 (잔디 기간 안)
+  const total = weeks.flat().reduce((sum, d) => sum + d.count, 0)
+
+  return { weeks, months, streak, total }
 }
 
 function AnswerGrass() {
   const scroller = useRef<HTMLDivElement>(null)
 
-  const { weeks, months, streak } = useMemo(() => buildGrass(), [])
+  const { weeks, months, streak, total } = useMemo(() => buildGrass(), [])
 
   // 좁은 화면에서는 최근(오른쪽)부터 보이게
   useEffect(() => {
@@ -295,16 +233,17 @@ function AnswerGrass() {
 
   return (
     <section aria-labelledby="grass-title" className="mt-10">
-      <div className="flex items-baseline justify-between">
+      {/* 연속 일수는 제목 바로 옆에 붙여 한 덩어리로 읽히게 */}
+      <div className="flex items-baseline gap-2">
         <h2 id="grass-title" className="text-[15px] font-medium">
           답변 기록
         </h2>
-        <p className="text-[13px] text-mute">
-          Streak <span className="text-lime tabular-nums">{streak}</span>
+        <p className="text-[13px] text-mute tabular-nums">
+          {total}개 답변, {streak}일째 이어가는 중
         </p>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-line p-4 md:p-5">
+      <div className="mt-3 rounded-2xl border border-line p-4 md:p-5">
         <div ref={scroller} className="overflow-x-auto [scrollbar-width:none]">
           {/* 1열: 요일 라벨(가로 스크롤해도 고정), 2열~: 주. 칸은 폭에 맞춰 늘어나되 최소 10px */}
           <div
