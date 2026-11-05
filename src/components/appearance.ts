@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 
 /**
- * 로그인 후 화면의 겉모습: 화면 모드(라이트/다크) + 대표색(잔디색).
+ * 로그인 후 화면의 겉모습: 화면 모드(기본 다크, 라이트로 바꿀 수 있음) + 대표색(잔디색).
  * - 모드는 배경·글자색만 뒤집는다(index.css의 [data-theme="light"]).
  * - 대표색은 사용자가 자유롭게 고른다. 잔디에는 그대로, 글자·강조에는 배경에서 읽히도록 자동 보정한 색을 쓴다.
  * 이 브라우저(localStorage)에만 저장. TODO: 서버 사용자 설정으로 옮기기
@@ -17,11 +17,11 @@ function read(): Appearance {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Appearance>
     return {
-      mode: v.mode === 'dark' ? 'dark' : 'light',
+      mode: v.mode === 'light' ? 'light' : 'dark',
       accent: typeof v.accent === 'string' && /^#[0-9a-f]{6}$/i.test(v.accent) ? v.accent : DEFAULT_ACCENT,
     }
   } catch {
-    return { mode: 'light', accent: DEFAULT_ACCENT }
+    return { mode: 'dark', accent: DEFAULT_ACCENT }
   }
 }
 
