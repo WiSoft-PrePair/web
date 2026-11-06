@@ -34,7 +34,7 @@ export function ListFilters({
           placeholder={placeholder}
           value={query}
           onChange={(e) => onQuery(e.target.value)}
-          className="w-full bg-transparent text-[13px] text-paper outline-none placeholder:text-dim [&::-webkit-search-cancel-button]:hidden"
+          className="w-full bg-transparent text-[16px] text-paper sm:text-[13px] outline-none placeholder:text-dim [&::-webkit-search-cancel-button]:hidden"
         />
         {query && (
           <button type="button" aria-label="검색어 지우기" onClick={() => onQuery('')} className="shrink-0 text-mute transition-colors hover:text-paper">

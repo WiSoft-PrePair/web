@@ -60,26 +60,26 @@ export default function AnswerList() {
       <div className="mx-auto max-w-[760px]">
         {/* 제목 아래 구분선 */}
         <div className="relative border-b border-line pb-3">
-          <PageTitle eyebrow="TEXT INTERVIEW" title="텍스트 면접" />
+          <PageTitle title="텍스트 면접" />
         </div>
 
         {/* 넓은 화면: 검색·태그를 가운데 목록 칸 바깥 왼쪽에 띄운다 (가운데는 질문만) */}
         <div className="relative mt-8">
-          <aside className="absolute top-0 right-full mr-12 hidden h-full w-[150px] xl:block">
+          <aside className="absolute top-0 right-full mr-12 hidden h-full w-[150px] min-[1240px]:block">
             <div className="sticky top-28">
               <ListFilters vertical {...filterProps} />
             </div>
           </aside>
 
           {/* 좁은 화면: 같은 검색·태그를 목록 위에 가로로 */}
-          <div className="mb-6 xl:hidden">
+          <div className="mb-6 min-[1240px]:hidden">
             <ListFilters {...filterProps} />
           </div>
 
           {groups.map((g) => (
             <section key={g.name} aria-label={g.name} className="mt-8 first:mt-0">
-              <h2 className="mb-2 text-[12px] font-medium text-mute">{g.name}</h2>
-              <ul>
+              <h2 className="mb-2.5 pl-1 text-[14px] font-semibold text-soft">{g.name}</h2>
+              <ul className="in-data-[theme=light]:rounded-2xl in-data-[theme=light]:border-0 in-data-[theme=light]:bg-card in-data-[theme=light]:px-5 in-data-[theme=light]:shadow-card in-data-[theme=light]:[&>li:last-child]:border-b-0">
                 {g.rows.map((r) => {
                   const today = r.id === QUESTIONS[0].id
                   const { score } = statusOf(r)
@@ -87,9 +87,14 @@ export default function AnswerList() {
                     <li key={r.id} className="group flex items-center gap-2 border-b border-line">
                       <Link to={`/app/answer/${r.id}`} state={{ from: page }} className="flex min-w-0 flex-1 items-center gap-4 py-3">
                         <ScoreRing score={score} />
-                        <span className="w-[52px] shrink-0 rounded-full border border-line py-[3px] text-center text-[11px] text-mute">{r.tag}</span>
-                        <span className="min-w-0 flex-1 truncate text-[15px] text-soft transition-colors duration-200 group-hover:text-paper">{r.question}</span>
-                        <span className="shrink-0 text-[12px] text-mute tabular-nums">{today ? <span className="font-medium text-paper">오늘</span> : r.date}</span>
+                        {/* 모바일: 질문 한 줄 + 아래 줄에 태그·날짜 / 넓은 화면(sm~): 태그 · 질문 · 날짜 한 줄 */}
+                        <span className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-4">
+                          <span className="block min-w-0 truncate text-[15px] font-medium text-[#4e5968] transition-colors group-hover:text-paper sm:order-2 sm:flex-1">{r.question}</span>
+                          <span className="flex items-center gap-2 sm:contents">
+                            <span className="w-[52px] shrink-0 rounded-full border border-line py-[3px] text-center text-[12px] text-mute sm:order-1">{r.tag}</span>
+                            <span className="shrink-0 text-[12px] text-mute tabular-nums sm:order-3">{today ? <span className="font-medium text-paper">오늘</span> : r.date}</span>
+                          </span>
+                        </span>
                       </Link>
                       <BookmarkButton on={bookmarks.has(r.id)} onToggle={() => toggleBookmark(r.id)} />
                     </li>

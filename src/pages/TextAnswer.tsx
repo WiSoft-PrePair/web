@@ -172,7 +172,7 @@ function AnswerDoc({ record }: { record: QuestionRecord }) {
           {/* 오른쪽: 이 질문의 답변 기록 (누르면 옆 창) */}
           <aside aria-label="답변 기록" className="lg:sticky lg:top-28 lg:self-start lg:pt-[9px]">
             <div className="flex items-center justify-between">
-              <h2 className="text-[14px] font-medium text-paper">
+              <h2 className="text-[15px] font-semibold text-paper">
                 답변 기록 <span className="ml-1 text-mute tabular-nums">{attempts.length}</span>
               </h2>
               {/* 새 답변 쓰기 */}
@@ -181,7 +181,7 @@ function AnswerDoc({ record }: { record: QuestionRecord }) {
                 onClick={() => setSelected(null)}
                 aria-label={draft.trim() ? '쓰던 답변 이어 쓰기' : '새 답변 쓰기'}
                 title={draft.trim() ? '쓰던 답변 이어 쓰기' : '새 답변 쓰기'}
-                className={`-mr-1.5 grid h-8 w-8 place-items-center rounded-full transition-colors hover:bg-tint/[0.06] hover:text-paper ${selected === null ? 'text-paper' : 'text-soft'}`}
+                className={`-mr-px grid h-8 w-8 place-items-center rounded-full transition-colors hover:bg-tint/[0.06] hover:text-paper ${selected === null ? 'text-paper' : 'text-soft'}`}
               >
                 <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
                   <path d="M12 5v14M5 12h14" />
@@ -313,7 +313,7 @@ function ResultView({ index, attempt, tag }: { index: number; attempt: Attempt; 
 
       {/* 접어 둔 것: 내 답변 · 꼬리 질문 */}
       <div className="mt-6 border-t border-line pt-5">
-        <div className="flex gap-5 text-[13px]">
+        <div className="flex gap-5 text-[14px]">
           {(
             [
               ['answer', '내 답변 보기'],
@@ -325,7 +325,7 @@ function ResultView({ index, attempt, tag }: { index: number; attempt: Attempt; 
               type="button"
               aria-expanded={more === k}
               onClick={() => setMore(more === k ? null : k)}
-              className={`flex items-center gap-1.5 transition-colors ${more === k ? 'text-paper' : 'text-mute hover:text-soft'}`}
+              className={`flex items-center gap-1.5 transition-colors ${more === k ? 'text-paper' : 'text-soft hover:text-paper'}`}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -376,7 +376,7 @@ function ResultView({ index, attempt, tag }: { index: number; attempt: Attempt; 
 /** 결과 안 섹션 제목: 형광 점 + 진한 글씨 (흰 배경에서도 형광이 살고, 글씨는 잘 읽히게) */
 function SectionTitle({ children }: { children: string }) {
   return (
-    <h3 className="flex items-center gap-2 text-[13px] font-medium text-paper">
+    <h3 className="flex items-center gap-2 text-[15px] font-semibold text-paper">
       <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-grass" />
       {children}
     </h3>
@@ -388,7 +388,7 @@ function Composer({ value, onChange, onSubmit, submitting }: { value: string; on
   return (
     <form onSubmit={onSubmit} className="mt-8">
       {/* STAR 가이드 */}
-      <div className="rounded-2xl border border-line px-5 py-4">
+      <div className="rounded-2xl border border-line bg-card px-5 py-4 shadow-card in-data-[theme=light]:border-transparent">
         <p className="text-[13px] text-soft">
           <span className="font-display font-medium tracking-[0.06em] text-paper">STAR</span>로 정리하면 전달이 쉬워요
         </p>
@@ -410,7 +410,7 @@ function Composer({ value, onChange, onSubmit, submitting }: { value: string; on
         placeholder="생각나는 대로 적어 보세요. 제출하면 바로 피드백을 드릴게요."
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-4 block min-h-[min(36svh,320px)] w-full resize-y rounded-2xl border border-line bg-transparent px-5 py-4 text-[16px] leading-[1.8] text-paper outline-none transition-colors placeholder:text-dim focus:border-mute"
+        className="mt-4 block min-h-[min(36svh,320px)] w-full resize-y rounded-2xl border border-line bg-card px-5 py-4 shadow-card in-data-[theme=light]:border-transparent text-[16px] leading-[1.8] text-paper outline-none transition-colors placeholder:text-dim focus:border-mute in-data-[theme=light]:focus:border-transparent"
       />
       <div className="mt-3 flex items-center justify-between">
         <span className="text-[12px] text-mute tabular-nums">{value.trim().length}자</span>
@@ -418,7 +418,7 @@ function Composer({ value, onChange, onSubmit, submitting }: { value: string; on
           <button
             type="submit"
             disabled={!value.trim() || submitting}
-            className="rounded-xl bg-paper px-5 py-2.5 text-sm font-semibold text-ink transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
+            className="rounded-xl bg-cta px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-cta-hover disabled:cursor-not-allowed disabled:opacity-30"
           >
             {submitting ? '분석 중…' : '제출하기'}
           </button>

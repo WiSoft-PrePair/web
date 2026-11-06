@@ -4,7 +4,7 @@ export const CHANNELS = [
   { value: 'kakao', label: '카카오톡' },
 ] as const
 export const FREQUENCY = [
-  { value: 'every', label: '매일', sub: '(08:00 AM)' },
-  { value: 'weekly', label: '매주', sub: '(월요일 08:00 AM)' },
+  { value: 'every', label: '매일', sub: '오전 8시' },
+  { value: 'weekly', label: '매주', sub: '월요일 오전 8시' },
 ] as const
 export type Channel = (typeof CHANNELS)[number]['value']

@@ -5,13 +5,10 @@ import { createBrowserRouter, RouterProvider } from 'react-router'
 import './index.css'
 import Landing from './pages/Landing'
 import AnswerList from './pages/AnswerList'
-import CustomInterview from './pages/CustomInterview'
 import InterviewList from './pages/InterviewList'
-import Jobs from './pages/Jobs'
 import Login from './pages/Login'
 import MockInterview from './pages/MockInterview'
 import MyPage from './pages/MyPage'
-import RewardShop from './pages/RewardShop'
 import ServiceHome from './pages/ServiceHome'
 import Signup from './pages/Signup'
 import TextAnswer from './pages/TextAnswer'
@@ -25,9 +22,6 @@ const router = createBrowserRouter([
   { path: '/app/answer/:id', element: <TextAnswer /> },
   { path: '/app/interview', element: <InterviewList /> },
   { path: '/app/interview/new', element: <MockInterview /> },
-  { path: '/app/custom', element: <CustomInterview /> },
-  { path: '/app/jobs', element: <Jobs /> },
-  { path: '/app/shop', element: <RewardShop /> },
   { path: '/app/me', element: <MyPage /> },
 ])
 

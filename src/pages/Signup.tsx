@@ -3,11 +3,9 @@ import { type FormEvent, type ReactNode, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { ChoiceCards } from '../components/prefs'
 import { CHANNELS, type Channel, FREQUENCY } from '../components/prefsOptions'
-import { AuthShell, EyeToggle, bareInput, lineInput, primaryButtonClass } from '../components/auth'
+import { AuthShell, EyeToggle, bareInput, boxInput, boxWrap, tossButton } from '../components/auth'
 
 const EASE = [0.22, 1, 0.36, 1] as const
-/** 가입 후 인사 화면을 보여 주는 시간 */
-const WELCOME_MS = 2000
 /** 단계 내용 넘김: 앞으로 가면 오른쪽에서 들어와 왼쪽으로, 뒤로 가면 반대 */
 const SLIDE = {
   enter: (d: number) => ({ opacity: 0, x: d * 28 }),
@@ -28,8 +26,8 @@ type Verify = 'idle' | 'sent' | 'verified'
 
 export default function Signup() {
   const navigate = useNavigate()
-  // 1: 계정 → 2: 질문 설정 → 완료
-  const [step, setStep] = useState<1 | 2 | 'loading'>(1)
+  // 1: 계정 → 2: 질문 설정 → 완료(done)
+  const [step, setStep] = useState<1 | 2 | 'done'>(1)
   const [showPassword, setShowPassword] = useState(false)
 
   const [email, setEmail] = useState('')
@@ -74,13 +72,12 @@ export default function Signup() {
     e.preventDefault()
     if (!canSubmit) return
     // TODO: POST /api/members/register
-    // 인사 + 로딩을 잠깐 보여 준 뒤 메인으로 (목업: 실제로는 API 응답에 맞춰)
-    setStep('loading')
-    window.setTimeout(() => navigate('/app'), WELCOME_MS)
+    // 완료 화면: 체크 → 인사 → 설정 요약 → 버튼으로 메인 (자동으로 넘기지 않는다)
+    setStep('done')
   }
 
   return (
-    <AuthShell align={typeof step === 'number' ? 'top' : 'center'}>
+    <AuthShell header={false} align={typeof step === 'number' ? 'top' : 'center'}>
       <AnimatePresence mode="wait">
         {typeof step === 'number' ? (
           <motion.div key="steps" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.45, ease: EASE }}>
@@ -96,9 +93,9 @@ export default function Signup() {
           <motion.div key="form" custom={dir} variants={SLIDE} initial="enter" animate="center" exit="exit" transition={{ duration: 0.28, ease: EASE }}>
             <h1 className="sr-only">회원가입 · 계정</h1>
 
-            <form onSubmit={onNext} className="mt-12 space-y-7">
+            <form onSubmit={onNext} className="mt-10 space-y-6">
               <Field label="이메일">
-                <div className="flex items-center gap-3 border-b border-line transition-colors focus-within:border-paper">
+                <div className={boxWrap}>
                   <input
                     aria-label="이메일"
                     type="email"
@@ -112,7 +109,7 @@ export default function Signup() {
                     className={`${bareInput} read-only:text-soft`}
                   />
                   {verify === 'verified' ? (
-                    <span className="flex shrink-0 items-center gap-1 text-[13px] font-medium text-paper">
+                    <span className="flex shrink-0 items-center gap-1 text-[13px] font-semibold text-toss">
                       <Check className="h-3.5 w-3.5" /> 인증됨
                     </span>
                   ) : (
@@ -120,7 +117,7 @@ export default function Signup() {
                       type="button"
                       disabled={!emailValid}
                       onClick={sendCode}
-                      className="shrink-0 text-sm font-medium text-paper transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:text-dim disabled:hover:opacity-100"
+                      className="shrink-0 text-sm font-semibold text-paper transition-opacity hover:opacity-70 disabled:cursor-not-allowed disabled:text-dim disabled:hover:opacity-100"
                     >
                       {verify === 'sent' ? '다시 받기' : '인증하기'}
                     </button>
@@ -137,7 +134,7 @@ export default function Signup() {
               </AnimatePresence>
 
               <Field label="비밀번호">
-                <div className="flex items-center gap-3 border-b border-line transition-colors focus-within:border-paper">
+                <div className={boxWrap}>
                   <input
                     aria-label="비밀번호"
                     placeholder="8자 이상"
@@ -152,11 +149,11 @@ export default function Signup() {
               </Field>
 
               <Field label="닉네임">
-                <input aria-label="닉네임" placeholder="어떻게 불러 드릴까요?" autoComplete="nickname" value={nickname} onChange={(e) => setNickname(e.target.value)} className={lineInput} />
+                <input aria-label="닉네임" placeholder="어떻게 불러 드릴까요?" autoComplete="nickname" value={nickname} onChange={(e) => setNickname(e.target.value)} className={boxInput} />
               </Field>
 
               <div className="pt-3">
-                <button type="submit" disabled={!accountValid} className={primaryButtonClass}>
+                <button type="submit" disabled={!accountValid} className={tossButton}>
                   다음
                 </button>
               </div>
@@ -166,7 +163,7 @@ export default function Signup() {
           <motion.div key="settings" custom={dir} variants={SLIDE} initial="enter" animate="center" exit="exit" transition={{ duration: 0.28, ease: EASE }}>
             <h1 className="sr-only">회원가입 · 질문 설정</h1>
 
-            <form onSubmit={onSubmit} className="mt-12 space-y-7">
+            <form onSubmit={onSubmit} className="mt-10 space-y-6">
               <Field label="희망 직무" hint="자유롭게 적을수록 질문이 더 잘 맞춰져요.">
                 <textarea
                   aria-label="희망 직무"
@@ -178,7 +175,7 @@ export default function Signup() {
                     e.target.style.height = 'auto'
                     e.target.style.height = `${e.target.scrollHeight}px`
                   }}
-                  className={`${lineInput} resize-none overflow-hidden`}
+                  className={`${boxInput} block h-auto min-h-[54px] resize-none overflow-hidden py-[14px] leading-[24px]`}
                 />
               </Field>
 
@@ -196,7 +193,7 @@ export default function Signup() {
               </Field>
 
               <div className="pt-3">
-                <button type="submit" disabled={!canSubmit} className={primaryButtonClass}>
+                <button type="submit" disabled={!canSubmit} className={tossButton}>
                   가입하기
                 </button>
                 <p className="mt-3 text-center text-xs text-dim">가입하면 이용약관과 개인정보 처리방침에 동의하게 됩니다.</p>
@@ -208,16 +205,23 @@ export default function Signup() {
           </motion.div>
         ) : (
           <motion.div key="welcome" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: EASE }} className="text-center">
-            <h1 className="text-[26px] font-semibold tracking-tight">{nickname}님, 반가워요</h1>
-            {/* 얇은 로딩 바: 다 차면 메인으로 */}
-            <div className="mx-auto mt-8 h-[3px] w-40 overflow-hidden rounded-full bg-white/[0.08]" role="progressbar" aria-label="불러오는 중">
-              <motion.div
-                className="h-full rounded-full bg-paper"
-                initial={{ width: '0%' }}
-                animate={{ width: '100%' }}
-                transition={{ duration: WELCOME_MS / 1000, ease: [0.65, 0, 0.35, 1] }}
-              />
-            </div>
+            {/* 완료 표시: 동그라미가 그려진 뒤 체크가 들어온다 */}
+            <svg viewBox="0 0 56 56" className="mx-auto h-14 w-14 text-toss" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <motion.circle cx="28" cy="28" r="25" strokeWidth="3" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.5, ease: EASE }} />
+              <motion.path d="M18 28.5l7 7 13-14" strokeWidth="3.5" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.35, delay: 0.45, ease: EASE }} />
+            </svg>
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.7, ease: EASE }}>
+              <h1 className="mt-7 text-[26px] font-semibold tracking-tight">{nickname}님, 반가워요</h1>
+              {/* 방금 고른 설정을 한 줄로 확인 */}
+              <p className="mt-3 text-[15px] leading-relaxed text-soft">
+                {welcomeLine(frequency, notification)[0]},
+                <br />
+                {welcomeLine(frequency, notification)[1]}
+              </p>
+              <button type="button" onClick={() => navigate('/app')} className={`mt-10 ${tossButton}`}>
+                오늘의 질문 보러 가기
+              </button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -230,7 +234,7 @@ export default function Signup() {
 function OtpInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [focused, setFocused] = useState(true)
   return (
-    <label className="relative mt-2.5 grid grid-cols-6 gap-2">
+    <label className="relative grid grid-cols-6 gap-2">
       <input
         aria-label="인증번호 6자리"
         inputMode="numeric"
@@ -248,8 +252,8 @@ function OtpInput({ value, onChange }: { value: string; onChange: (v: string) =>
         return (
           <span
             key={i}
-            className={`grid h-12 place-items-center rounded-xl border bg-ink-2 font-display text-xl font-semibold text-paper transition-colors ${
-              current ? 'border-paper' : i < value.length ? 'border-mute' : 'border-line'
+            className={`grid h-[54px] place-items-center rounded-2xl border bg-card font-display text-xl font-semibold text-paper transition-colors ${
+              current ? 'border-dim' : i < value.length ? 'border-soft/40' : 'border-line'
             }`}
           >
             {value[i] ?? ''}
@@ -272,7 +276,7 @@ function Stepper({ step, canGoNext, onGo, onBack }: { step: 1 | 2; canGoNext: bo
         type="button"
         onClick={onBack}
         aria-label="이전"
-        className="-ml-2 mb-4 grid h-9 w-9 place-items-center rounded-full text-soft transition-colors hover:bg-white/[0.06] hover:text-paper"
+        className="-ml-2 mb-4 grid h-9 w-9 place-items-center rounded-full text-soft transition-colors hover:bg-tint/[0.06] hover:text-paper"
       >
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M15 5l-7 7 7 7" />
@@ -309,9 +313,9 @@ function Stepper({ step, canGoNext, onGo, onBack }: { step: 1 | 2; canGoNext: bo
             onClick={() => onGo(n)}
             className="group flex-1 py-2 disabled:cursor-default"
           >
-            <span className="relative block h-[3px] overflow-hidden rounded-full bg-white/[0.08]">
+            <span className="relative block h-[3px] overflow-hidden rounded-full bg-tint/[0.08]">
               <motion.span
-                className="absolute inset-0 origin-left rounded-full bg-paper"
+                className="absolute inset-0 origin-left rounded-full bg-toss"
                 initial={false}
                 animate={{ scaleX: filled ? 1 : 0 }}
                 transition={{ duration: 0.45, ease: EASE }}
@@ -336,13 +340,20 @@ function Field({ label, hint, hintTone, appear = false, children }: { label: str
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -6, transition: { duration: 0.2 } }}
     >
-      <span className="block text-[13px] text-soft">{label}</span>
-      {children}
+      <span className="block text-[13px] font-medium text-soft">{label}</span>
+      <div className="mt-2">{children}</div>
       {hint && <span className={`mt-2.5 block text-xs ${hintTone === 'lime' ? 'text-paper' : 'text-mute'}`}>{hint}</span>}
     </motion.div>
   )
 }
 
+
+/** 완료 화면 설정 요약 두 줄: ["매일 오전 8시", "이메일로 질문을 보내 드릴게요."] */
+function welcomeLine(frequency?: string, notification?: string): [string, string] {
+  const when = frequency === 'weekly' ? '매주 월요일 오전 8시' : '매일 오전 8시'
+  const where = notification === 'both' ? '이메일과 카카오톡으로' : notification === 'kakao' ? '카카오톡으로' : '이메일로'
+  return [when, `${where} 질문을 보내 드릴게요.`]
+}
 
 function Check({ className = 'h-4 w-4' }: { className?: string }) {
   return (

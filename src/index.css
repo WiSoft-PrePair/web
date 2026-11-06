@@ -14,6 +14,17 @@
   --color-tint: #ffffff;
   /* 잔디색: 로그인 후 화면에서 사용자가 고른 대표색 그대로 */
   --color-grass: #e1ff6b;
+  /* 주요 버튼(제출·면접 시작·로그인): 대표색보다 한 단계 진한 파랑. 흰 글씨 대비 4.82:1, 올리면 5.43:1 */
+  --color-cta: #1f6fdb;
+  --color-cta-hover: #1a66d1;
+  /* 로그인·회원가입 버튼·선택 강조: 토스 파랑(TDS blue500) */
+  --color-toss: #3182f6;
+  --color-toss-hover: #2a74e0;
+  /* 카드 면: 다크에서는 바탕과 같고, 라이트에서는 연회색 바탕 위 흰 카드 */
+  --color-card: #111111;
+  /* 흰 바탕 위 흰 카드: 아주 옅은 윤곽선 + 연보라 빛 그림자 (ascent 카드 0 0 15px rgba(79,76,254,.12) 참고).
+     Tailwind가 그림자 값을 빌드 때 그대로 넣으므로 [data-theme]에서 덮어쓸 수 없어 여기서 정한다 (화면은 라이트 고정) */
+  --shadow-card: 0 0 0 1px rgba(16, 24, 40, 0.05), 0 4px 22px -6px rgba(79, 76, 254, 0.12);
   /* 큰 글씨(점수 등)용 대표색: 대비 3:1 기준이라 글자용보다 원래 색에 가깝다 */
   --color-accent-lg: #e1ff6b;
 
@@ -25,14 +36,69 @@
    대표색(--color-lime, --color-grass)은 ThemeRoot가 사용자 설정으로 덮어쓴다. */
 [data-theme="light"] {
   --color-ink: #ffffff;
-  --color-ink-2: #f4f5f7;
-  --color-line: #e6e8eb;
+  --color-ink-2: #e9edf2;
+  --color-card: #ffffff;
+  --color-line: #e3e7ec;
   --color-dim: #b0b8c1;
   --color-mute: #6b7684;
   --color-soft: #333d4b;
   --color-paper: #111111;
   --color-tint: #000000;
   color-scheme: light;
+}
+
+/* 라이트: 헤더 바로 아래부터 본문 뒤에 큰 판을 깐다 (ascent 참고).
+   - 판(::before): 흰 테두리 8px + 위쪽에만 아주 옅은 하늘·연보라·살구빛, 나머지는 흰색. 첫 화면 높이만큼만 있고 아래는 흰 바탕에 녹아든다.
+   - 빛(::after): 판 좌우 바깥의 연보라 빛(헤더 쪽 위로는 없음). 아래로 갈수록 사라져서 좌우 선이 딱딱하게 이어지지 않는다.
+   본문은 판 위에 그대로 있고(가려지지 않음), 다크는 영향 없음 */
+[data-theme="light"] .app-panel {
+  --panel-h: calc(100svh - 52px);
+  position: relative;
+  isolation: isolate;
+  margin: 52px 12px 0;
+  min-height: var(--panel-h);
+}
+[data-theme="light"] .app-panel::before,
+[data-theme="light"] .app-panel::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+[data-theme="light"] .app-panel::before {
+  z-index: -1;
+  inset: 0 0 auto;
+  height: var(--panel-h);
+  border: 8px solid #ffffff;
+  border-bottom: 0;
+  border-radius: 32px 32px 0 0;
+  /* ascent 실측: 위 왼쪽 옅은 하늘(#f7fbff), 위 가운데 옅은 연보라(#f8f6ff), 위 오른쪽 살구빛(#fcfafd), 화면 1/3 아래부터는 흰색 */
+  background:
+    radial-gradient(900px 520px at 8% 0%, #f2f8ff, transparent 70%) padding-box,
+    radial-gradient(1000px 560px at 50% 8%, #f6f3ff, transparent 70%) padding-box,
+    radial-gradient(760px 480px at 100% 0%, #fdf6f4, transparent 70%) padding-box,
+    #ffffff padding-box;
+}
+[data-theme="light"] .app-panel::after {
+  z-index: -2;
+  /* 좌우로만 번지고, 헤더 쪽 위로는 새지 않게 위에서부터 서서히 나타났다가 아래로 사라진다 */
+  inset: 0 -24px auto;
+  height: var(--panel-h);
+  padding: 0 24px;
+  background: rgba(79, 76, 254, 0.16) content-box;
+  filter: blur(12px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 220px, transparent 75%);
+}
+/* 좁은 화면은 헤더 아래 메뉴 줄이 하나 더 있다 */
+@media (max-width: 767px) {
+  [data-theme="light"] .app-panel {
+    --panel-h: calc(100svh - 91px);
+    margin-top: 91px;
+  }
+}
+@media (min-width: 1280px) {
+  [data-theme="light"] .app-panel {
+    margin: 52px 36px 0;
+  }
 }
 
 :root {
@@ -68,14 +134,20 @@ body {
 
 /* 라임 점 커서: OS 커서 이미지라 지연이 없다 */
 @media (hover: hover) and (pointer: fine) {
-  html,
-  html * {
+  /* 로그인 후 화면·로그인·회원가입([data-theme] 안)은 일반 OS 커서. :where로 점수를 0으로 둬서 cursor-pointer 등이 이긴다 */
+  :where(html, html *):not(:where([data-theme], [data-theme] *)) {
     cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='8' fill='%23E1FF6B'/%3E%3C/svg%3E") 8 8, auto !important;
   }
-  /* 로그인 후 화면: 커서 점도 대표색으로 (ThemeRoot가 --app-cursor 지정) */
-  html [data-theme],
-  html [data-theme] * {
-    cursor: var(--app-cursor) !important;
+  /* 커서는 물려받는 속성이라 [data-theme] 안은 일반 커서로 다시 지정 (점수 0이라 cursor-pointer 등이 이긴다) */
+  :where([data-theme], [data-theme] *) {
+    cursor: auto;
+  }
+  /* 누를 수 있는 요소와 그 안의 글자·아이콘까지 손가락 커서 (안쪽 글자에서 I자 커서가 나오지 않게) */
+  :where([data-theme] :is(a, button, select, summary, [role='button'], [role='radio']), [data-theme] :is(a, button, summary, [role='button'], [role='radio']) *) {
+    cursor: pointer;
+  }
+  :where([data-theme] :disabled, [data-theme] :disabled *) {
+    cursor: default;
   }
   /* 커서가 다른 모양으로 바뀌는 영역(예: 메인 바로가기)은 OS 커서를 숨긴다 */
   html [data-cursor-none],

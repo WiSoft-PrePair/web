@@ -49,31 +49,36 @@ export default function InterviewList() {
       <div className="mx-auto max-w-[760px]">
         {/* 제목 아래 구분선 (텍스트 면접 목록과 같게) */}
         <div className="border-b border-line pb-3">
-          <PageTitle eyebrow="VIDEO INTERVIEW" title="화상 면접" />
+          <PageTitle title="화상 면접" />
         </div>
 
         <div className="relative mt-8">
           {/* 넓은 화면: 검색·필터를 가운데 목록 칸 바깥 왼쪽에 (텍스트 면접 목록과 같게) */}
-          <aside className="absolute top-0 right-full mr-12 hidden h-full w-[150px] xl:block">
+          <aside className="absolute top-0 right-full mr-12 hidden h-full w-[150px] min-[1240px]:block">
             <div className="sticky top-28">
               <ListFilters vertical {...filterProps} />
             </div>
           </aside>
           {/* 좁은 화면: 목록 위에 가로로 */}
-          <div className="mb-6 xl:hidden">
+          <div className="mb-6 min-[1240px]:hidden">
             <ListFilters {...filterProps} />
           </div>
 
           {groups.map((g) => (
             <section key={g.name} aria-label={g.name} className="mt-8 first:mt-0">
-              <h2 className="mb-2 text-[12px] font-medium text-mute">{g.name}</h2>
-              <ul>
+              <h2 className="mb-2.5 pl-1 text-[14px] font-semibold text-soft">{g.name}</h2>
+              <ul className="in-data-[theme=light]:rounded-2xl in-data-[theme=light]:border-0 in-data-[theme=light]:bg-card in-data-[theme=light]:px-5 in-data-[theme=light]:shadow-card in-data-[theme=light]:[&>li:last-child]:border-b-0">
                 {g.rows.map((r) => (
                   <li key={r.id} className="group flex items-center gap-4 border-b border-line py-3">
                     <ScoreRing score={r.score} />
-                    <span className="w-[52px] shrink-0 rounded-full border border-line py-[3px] text-center text-[11px] text-mute">{r.tag}</span>
-                    <span className="min-w-0 flex-1 truncate text-[15px] text-soft transition-colors duration-200 group-hover:text-paper">{r.first}</span>
-                    <span className="shrink-0 text-[12px] text-mute tabular-nums">{r.date}</span>
+                    {/* 모바일: 질문 한 줄 + 아래 줄에 태그·날짜 / 넓은 화면(sm~): 태그 · 질문 · 날짜 한 줄 */}
+                    <span className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-4">
+                      <span className="block min-w-0 truncate text-[15px] font-medium text-[#4e5968] transition-colors duration-200 group-hover:text-paper sm:order-2 sm:flex-1">{r.first}</span>
+                      <span className="flex items-center gap-2 sm:contents">
+                        <span className="w-[52px] shrink-0 rounded-full border border-line py-[3px] text-center text-[12px] text-mute sm:order-1">{r.tag}</span>
+                        <span className="shrink-0 text-[12px] text-mute tabular-nums sm:order-3">{r.date}</span>
+                      </span>
+                    </span>
                     <BookmarkButton on={bookmarks.has(r.id)} onToggle={() => toggleInterviewBookmark(r.id)} className="-ml-2" />
                   </li>
                 ))}
@@ -106,7 +111,7 @@ export default function InterviewList() {
       {/* 면접 시작: 화면 오른쪽 아래에 떠 있어 스크롤 중에도 바로 누를 수 있다 */}
       <Link
         to="/app/interview/new"
-        className="fixed right-[var(--side)] bottom-8 z-20 flex h-12 items-center gap-2 rounded-full bg-paper pr-5 pl-4 text-[14px] font-semibold text-ink shadow-[0_10px_30px_-8px_rgba(0,0,0,0.35)] transition-transform duration-200 hover:-translate-y-0.5"
+        className="fixed right-[var(--side)] bottom-8 z-20 flex h-12 items-center gap-2 rounded-full bg-cta pr-5 pl-4 text-[14px] font-semibold text-white shadow-[0_10px_30px_-8px_rgba(31,111,219,0.45)] transition-[transform,background-color] duration-200 hover:-translate-y-0.5 hover:bg-cta-hover"
       >
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h9A1.5 1.5 0 0 1 15 7.5v9a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 3 16.5v-9Z M15 10.5l6-3.5v10l-6-3.5" />

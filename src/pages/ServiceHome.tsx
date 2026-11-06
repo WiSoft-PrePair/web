@@ -1,45 +1,107 @@
 import { motion } from 'motion/react'
-import { type ReactNode, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { AppHeader, ThemeRoot } from '../components/AppShell'
+import { AppHeader, Panel, ThemeRoot } from '../components/AppShell'
 import { ScoreRing } from '../components/ScoreRing'
-import { fullDate, QUESTIONS } from '../data/questions'
+import { JOB_POSTINGS } from '../data/jobPostings'
+import { QUESTIONS } from '../data/questions'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
 /**
- * 서비스 홈 (화면만, API 연동은 아직): 간단한 헤더 → 오늘의 질문(바로가기 3개) → 질문 기록 → 답변 잔디.
+ * 서비스 홈 (화면만, API 연동은 아직): 헤더(메뉴) → 오늘의 질문 → 질문 기록 → 답변 잔디.
  * 데이터는 전부 목업. 나중에 interview-service 응답으로 바꾼다.
  */
 export default function ServiceHome() {
   return (
     <ThemeRoot className="min-h-svh text-soft [--side:var(--gutter)] lg:[--side:clamp(40px,6.25vw,120px)]">
       <AppHeader />
+      <Panel>
       <motion.main
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: EASE }}
-        className="mx-auto max-w-[960px] px-[var(--side)] pt-24 pb-12 xl:pt-28"
+        className="mx-auto max-w-[960px] px-[var(--side)] pt-24 pb-32 xl:pt-28 in-data-[theme=light]:pt-20 xl:in-data-[theme=light]:pt-24"
       >
         <TodayQuestion />
         <QuestionHistory />
         <AnswerGrass />
+        <TrendingJobs />
       </motion.main>
+      </Panel>
+      <InterviewBar />
     </ThemeRoot>
+  )
+}
+
+/* ───────── 지금 뜨는 공고 ───────── */
+
+/** 공고 카드 3열: 첫 글자 칸 · 회사 · 제목(두 줄) · 직군/고용 형태 · 경력 | 지역 | 마감. 누르면 원래 공고(새 창) */
+function TrendingJobs() {
+  return (
+    <section aria-labelledby="jobs-title" className="mt-10">
+      <h2 id="jobs-title" className="pl-1 text-[17px] font-semibold text-paper">
+        지금 뜨는 공고
+      </h2>
+      <ul className="mt-[10px] grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+        {JOB_POSTINGS.map((j) => (
+          <li key={j.id}>
+            <a
+              href={j.url || undefined}
+              target="_blank"
+              rel="noreferrer"
+              className="flex h-full flex-col rounded-2xl bg-card p-5 shadow-card transition-transform duration-200 hover:-translate-y-0.5"
+            >
+              <span className="grid h-11 w-11 place-items-center rounded-xl text-[16px] font-bold" style={{ backgroundColor: `${j.color}14`, color: j.color }}>
+                {j.company.slice(0, 1)}
+              </span>
+              <span className="mt-4 text-[12px] text-mute">{j.company}</span>
+              <span className="mt-1 line-clamp-2 min-h-[2lh] text-[16px] leading-snug font-semibold text-paper">{j.title}</span>
+              <span className="mt-3 flex gap-1.5 text-[11px] font-medium">
+                <span className="rounded-md bg-toss/[0.08] px-2 py-0.5 text-toss">{j.field}</span>
+                <span className="rounded-md bg-tint/[0.05] px-2 py-0.5 text-mute">{j.type}</span>
+              </span>
+              <span className="mt-5 flex items-center gap-2 text-[12px] text-soft">
+                {j.career}
+                <span className="h-2.5 w-px bg-line" />
+                {j.location}
+                <span className="h-2.5 w-px bg-line" />
+                <span className={j.dday !== null && j.dday <= 3 ? 'font-semibold text-[#f04452]' : ''}>{j.dday === null ? '상시' : j.dday === 0 ? '오늘 마감' : `D-${j.dday}`}</span>
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+/* ───────── 하단 바로가기 바 ───────── */
+
+/** 화면 아래 가운데에 떠 있는 알약 바: 왼쪽 안내 두 줄 + 오른쪽 버튼으로 바로 화상 면접(기기 점검)에 들어간다 */
+function InterviewBar() {
+  return (
+    <div className="fixed inset-x-0 bottom-6 z-20 flex justify-center px-[var(--gutter)]">
+      {/* 유리 느낌: 반투명 흰색 + 흐림 + 위쪽 가장자리 하이라이트 */}
+      <div className="flex w-full max-w-[470px] items-center justify-between gap-3 sm:gap-10 rounded-full border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(243,245,250,0.82))] py-2 pr-2 pl-5 sm:py-2.5 sm:pr-2.5 sm:pl-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_0_0_1px_rgba(16,24,40,0.04),0_12px_30px_-12px_rgba(16,24,40,0.18)] backdrop-blur-xl">
+        <p className="min-w-0 leading-snug">
+          <span className="block truncate text-[12px] font-medium text-mute">프리페어로 면접 연습하고</span>
+          <span className="block truncate text-[15px] font-semibold text-paper">실전처럼 말로 답해 보세요</span>
+        </p>
+        <Link
+          to="/app/interview/new"
+          className="shrink-0 rounded-full bg-toss px-4 py-3 text-[14px] font-semibold sm:px-6 sm:py-3.5 text-white transition-colors hover:bg-toss-hover"
+        >
+          화상 면접 시작
+        </Link>
+      </div>
+    </div>
   )
 }
 
 /* ───────── 오늘의 질문 ───────── */
 
-const ACTIONS = [
-  { label: '텍스트 면접', to: '/app/answer' },
-  { label: '화상 면접', to: '/app/interview' },
-  { label: '맞춤 면접', to: '/app/custom' },
-  { label: '공고 관리', to: '/app/jobs' },
-  { label: '리워드 샵', to: '/app/shop' },
-]
-
-/** 가운데에 오늘의 질문, 그 아래 텍스트 바로가기 3개 */
+/** 가운데에 오늘의 질문 (바로가기는 헤더 메뉴로 옮김) */
 const NICKNAME = '우민' // 목업
 
 function TodayQuestion() {
@@ -51,47 +113,12 @@ function TodayQuestion() {
       className="flex flex-col items-center text-center"
     >
       {/* 질문 위 인사 한마디 (TODO: 닉네임은 회원 API에서) */}
-      <p className="bob text-[14px] text-mute">
+      <p className="bob text-[17px] text-mute">
         <span className="font-medium text-paper">{NICKNAME}님,</span> 오늘도 한 문제만 같이 풀어 볼까요?
       </p>
       <OneLineTitle id="today-title" text={today.question} />
 
-      <ActionTiles />
     </section>
-  )
-}
-
-/** 바로가기 아이콘 (24px 선 아이콘) */
-const ICONS: Record<string, ReactNode> = {
-  '텍스트 면접': <path d="M4 20h4L19 9l-4-4L4 16v4Z M13.5 6.5l4 4" />,
-  '화상 면접': <path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h9A1.5 1.5 0 0 1 15 7.5v9a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 3 16.5v-9Z M15 10.5l6-3.5v10l-6-3.5" />,
-  '맞춤 면접': <path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z M14 3v5h5 M9.5 13l1.8 1.8L15 11" />,
-  '공고 관리': <path d="M4 8h16v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8Z M9 8V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V8 M4 13h16" />,
-  '리워드 샵': <path d="M4 10h16v10H4V10Z M3 7h18v3H3V7Z M12 7v13 M12 7c-1.5-3-5-3-5-1s3 1 5 1Zm0 0c1.5-3 5-3 5-1s-3 1-5 1Z" />,
-}
-
-/**
- * 바로가기 5개: 카드. 아이콘은 왼쪽 위, 이름은 왼쪽 아래.
- * 커서를 올리면 아래에서부터 대표색이 차올라 카드가 물들고, 글자·아이콘은 그 위에서 읽히는 색으로 바뀐다.
- */
-function ActionTiles() {
-  return (
-    <nav aria-label="바로가기" className="mt-9 grid w-full max-w-[720px] grid-cols-5 gap-2 max-sm:grid-cols-3">
-      {ACTIONS.map(({ label, to }) => (
-        <Link
-          key={to}
-          to={to}
-          className="group relative isolate flex h-[92px] flex-col items-start justify-between overflow-hidden rounded-xl border border-line p-4 text-left text-soft transition-[color,border-color] duration-300 hover:border-grass hover:text-(--accent-on)"
-        >
-          {/* 차오르는 대표색 */}
-          <span aria-hidden className="absolute inset-0 -z-10 origin-bottom scale-y-0 bg-grass transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-y-100" />
-          <svg viewBox="0 0 24 24" className="h-5 w-5 text-mute transition-colors duration-300 group-hover:text-(--accent-on)" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            {ICONS[label]}
-          </svg>
-          <span className="text-[14px] font-medium">{label}</span>
-        </Link>
-      ))}
-    </nav>
   )
 }
 
@@ -118,11 +145,7 @@ function OneLineTitle({ id, text }: { id: string; text: string }) {
   }, [text])
 
   return (
-    <h1
-      ref={ref}
-      id={id}
-      className="bob mt-4 w-[min(1120px,calc(100vw-2*var(--side)))] leading-[1.35] font-semibold text-soft tracking-tight text-balance"
-    >
+    <h1 ref={ref} id={id} className="bob mt-4 w-[min(1120px,calc(100vw-2*var(--side)))] leading-[1.35] font-semibold text-soft tracking-tight text-balance">
       {text}
     </h1>
   )
@@ -136,8 +159,8 @@ const RECORDS = QUESTIONS.map((q) => ({ ...q, score: q.feedback?.score }))
 function QuestionHistory() {
   return (
     <section aria-labelledby="history-title" className="mt-14">
-      <div className="flex items-baseline justify-between">
-        <h2 id="history-title" className="text-[15px] font-medium">
+      <div className="flex items-baseline justify-between px-1">
+        <h2 id="history-title" className="text-[17px] font-semibold text-paper">
           이 질문, 지금 다시 답하면?
         </h2>
         <Link to="/app/answer" className="-mr-1 flex items-center text-[13px] text-soft transition-colors hover:text-paper">
@@ -148,24 +171,29 @@ function QuestionHistory() {
         </Link>
       </div>
 
-      <ul className="mt-[10px] border-t border-line">
-        {RECORDS.slice(1).filter((r) => r.score !== undefined).slice(0, 3).map((r) => {
-          const pending = r.score === undefined
-          return (
-            <li key={r.id} className="border-b border-line">
-              <Link to={`/app/answer/${r.id}`} className="group flex w-full items-center gap-4 py-2.5 text-left">
-                <span className="shrink-0 text-[13px] text-mute tabular-nums">{fullDate(r.date)}</span>
-                <span className="w-[52px] shrink-0 rounded-full border border-line py-[3px] text-center text-[11px] text-mute">{r.tag}</span>
-                <span className="min-w-0 flex-1 truncate text-[15px] text-soft transition-colors group-hover:text-paper">{r.question}</span>
-                {pending ? (
-                  <span className="shrink-0 rounded-full border border-lime px-2.5 py-0.5 text-[12px] text-lime">답변하기</span>
-                ) : (
-                  <ScoreRing score={r.score} size={30} />
-                )}
-              </Link>
-            </li>
-          )
-        })}
+      <ul className="mt-[10px] border-t border-line in-data-[theme=light]:rounded-2xl in-data-[theme=light]:border-0 in-data-[theme=light]:bg-card in-data-[theme=light]:px-5 in-data-[theme=light]:shadow-card in-data-[theme=light]:[&>li:last-child]:border-b-0">
+        {RECORDS.slice(1)
+          .filter((r) => r.score !== undefined)
+          .slice(0, 3)
+          .map((r) => {
+            const pending = r.score === undefined
+            return (
+              <li key={r.id} className="border-b border-line">
+                {/* 텍스트 면접 목록과 같은 순서: 점수 링 → 태그 → 질문 → 날짜(오른쪽, 짧게) */}
+                <Link to={`/app/answer/${r.id}`} className="group flex w-full items-center gap-4 py-2.5 text-left">
+                  {pending ? <span className="shrink-0 rounded-full border border-lime px-2.5 py-0.5 text-[12px] text-lime">답변하기</span> : <ScoreRing score={r.score} size={30} />}
+                  {/* 모바일: 질문 한 줄 + 아래 줄에 태그·날짜 / 넓은 화면(sm~): 태그 · 질문 · 날짜 한 줄 */}
+                  <span className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-4">
+                    <span className="block min-w-0 truncate text-[15px] font-medium text-[#4e5968] transition-colors group-hover:text-paper sm:order-2 sm:flex-1">{r.question}</span>
+                    <span className="flex items-center gap-2 sm:contents">
+                      <span className="w-[52px] shrink-0 rounded-full border border-line py-[3px] text-center text-[12px] text-mute sm:order-1">{r.tag}</span>
+                      <span className="shrink-0 text-[12px] text-mute tabular-nums sm:order-3">{r.date}</span>
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            )
+          })}
       </ul>
     </section>
   )
@@ -220,8 +248,22 @@ function buildGrass() {
   return { weeks, months, streak, total }
 }
 
+/** 잔디 칸 말풍선: "11월 4일 (화) · 답변 2개" / 답이 없으면 "답변 없음" */
+function grassTip(date: Date, count: number) {
+  const day = '일월화수목금토'[date.getDay()]
+  return `${date.getMonth() + 1}월 ${date.getDate()}일 (${day}) · ${count ? `답변 ${count}개` : '답변 없음'}`
+}
+
 function AnswerGrass() {
   const scroller = useRef<HTMLDivElement>(null)
+  const card = useRef<HTMLDivElement>(null)
+  // 커서를 올린 칸 위에 바로 뜨는 말풍선 (위치는 카드 기준)
+  const [tip, setTip] = useState<{ x: number; y: number; text: string } | null>(null)
+  const showTip = (el: HTMLElement, text: string) => {
+    const c = card.current?.getBoundingClientRect()
+    const r = el.getBoundingClientRect()
+    if (c) setTip({ x: r.left + r.width / 2 - c.left, y: r.top - c.top, text })
+  }
 
   const { weeks, months, streak, total } = useMemo(() => buildGrass(), [])
 
@@ -234,40 +276,32 @@ function AnswerGrass() {
   return (
     <section aria-labelledby="grass-title" className="mt-10">
       {/* 연속 일수는 제목 바로 옆에 붙여 한 덩어리로 읽히게 */}
-      <div className="flex items-baseline gap-2">
-        <h2 id="grass-title" className="text-[15px] font-medium">
-          답변 기록
+      <div className="flex items-baseline gap-2 pl-1">
+        <h2 id="grass-title" className="text-[17px] font-semibold text-paper">
+          쌓아 온 날들
         </h2>
         <p className="text-[13px] text-mute tabular-nums">
           {total}개 답변, {streak}일째 이어가는 중
         </p>
       </div>
 
-      <div className="mt-3 rounded-2xl border border-line p-4 md:p-5">
+      <div ref={card} onMouseLeave={() => setTip(null)} className="relative mt-[10px] rounded-2xl border border-line bg-card p-4 shadow-card md:p-5 in-data-[theme=light]:rounded-3xl in-data-[theme=light]:border-transparent">
         <div ref={scroller} className="overflow-x-auto [scrollbar-width:none]">
           {/* 1열: 요일 라벨(가로 스크롤해도 고정), 2열~: 주. 칸은 폭에 맞춰 늘어나되 최소 10px */}
           <div
             className="grid gap-[3px]"
             style={{ minWidth: `calc(28px + ${WEEKS} * 13px)`, gridTemplateColumns: `28px repeat(${WEEKS}, minmax(10px, 1fr))`, gridTemplateRows: `auto repeat(7, auto)` }}
           >
-            <span className="sticky left-0 z-[1] bg-ink" style={{ gridRow: 1, gridColumn: 1 }} />
+            <span className="sticky left-0 z-[1] bg-card" style={{ gridRow: 1, gridColumn: 1 }} />
             {/* 폭 0: 라벨 글자가 칸 너비를 늘리지 않게 */}
             {months.map((m) => (
-              <span
-                key={`${m.col}-${m.label}`}
-                className="mb-1.5 w-0 text-[11px] whitespace-nowrap text-mute"
-                style={{ gridRow: 1, gridColumn: m.col + 2 }}
-              >
+              <span key={`${m.col}-${m.label}`} className="mb-1.5 w-0 text-[11px] whitespace-nowrap text-mute" style={{ gridRow: 1, gridColumn: m.col + 2 }}>
                 {m.label}
               </span>
             ))}
 
             {DAY_LABELS.map((l, i) => (
-              <span
-                key={i}
-                className="sticky left-0 z-[1] flex items-center bg-ink text-[11px] leading-none text-mute"
-                style={{ gridRow: i + 2, gridColumn: 1 }}
-              >
+              <span key={i} className="sticky left-0 z-[1] flex items-center bg-card text-[11px] leading-none text-mute" style={{ gridRow: i + 2, gridColumn: 1 }}>
                 {l}
               </span>
             ))}
@@ -276,14 +310,25 @@ function AnswerGrass() {
               col.map(({ date, count, future }, d) => (
                 <span
                   key={date.getTime()}
-                  title={future ? undefined : `${date.getMonth() + 1}월 ${date.getDate()}일 · 답변 ${count}개`}
-                  className={`aspect-square rounded-[3px] ${future ? 'bg-transparent' : LEVEL_CLASS[count]}`}
+                  aria-label={future ? undefined : grassTip(date, count)}
+                  onMouseEnter={future ? () => setTip(null) : (e) => showTip(e.currentTarget, grassTip(date, count))}
+                  className={`aspect-square rounded-[3px] transition-transform duration-150 ${future ? 'bg-transparent' : `${LEVEL_CLASS[count]} hover:scale-[1.35]`}`}
                   style={{ gridRow: d + 2, gridColumn: w + 2 }}
                 />
               )),
             )}
           </div>
         </div>
+
+        {tip && (
+          <span
+            role="tooltip"
+            className="pointer-events-none absolute z-[2] -translate-x-1/2 -translate-y-full rounded-lg bg-paper px-2.5 py-1.5 text-[12px] font-medium whitespace-nowrap text-ink shadow-[0_6px_16px_-6px_rgba(0,0,0,0.35)]"
+            style={{ left: tip.x, top: tip.y - 6 }}
+          >
+            {tip.text}
+          </span>
+        )}
 
         <div className="mt-3 flex items-center justify-end gap-1.5 text-[11px] text-mute">
           Less

@@ -1,50 +1,17 @@
-import { useSyncExternalStore } from 'react'
-
 /**
- * 로그인 후 화면의 겉모습: 화면 모드(기본 다크, 라이트로 바꿀 수 있음) + 대표색(잔디색).
+ * 로그인 후 화면의 겉모습: 화면 모드 + 대표색(잔디색). 지금은 화이트 + 하늘 파랑으로 고정.
  * - 모드는 배경·글자색만 뒤집는다(index.css의 [data-theme="light"]).
- * - 대표색은 사용자가 자유롭게 고른다. 잔디에는 그대로, 글자·강조에는 배경에서 읽히도록 자동 보정한 색을 쓴다.
- * 이 브라우저(localStorage)에만 저장. TODO: 서버 사용자 설정으로 옮기기
+ * - 대표색은 잔디에는 그대로, 글자·강조에는 배경에서 읽히도록 자동 보정한 색을 쓴다.
  */
 export type Mode = 'light' | 'dark'
 export type Appearance = { mode: Mode; accent: string }
 
-export const DEFAULT_ACCENT = '#e1ff6b' // 브랜드 라임(형광)
-const KEY = 'prepair-appearance'
-const listeners = new Set<() => void>()
-
-function read(): Appearance {
-  try {
-    const v = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Appearance>
-    return {
-      mode: v.mode === 'light' ? 'light' : 'dark',
-      accent: typeof v.accent === 'string' && /^#[0-9a-f]{6}$/i.test(v.accent) ? v.accent : DEFAULT_ACCENT,
-    }
-  } catch {
-    return { mode: 'dark', accent: DEFAULT_ACCENT }
-  }
-}
-
-let state = read()
-
-export function setAppearance(next: Partial<Appearance>) {
-  state = { ...state, ...next }
-  try {
-    localStorage.setItem(KEY, JSON.stringify(state))
-  } catch {
-    /* 저장이 막힌 환경이면 이번 방문 동안만 */
-  }
-  listeners.forEach((fn) => fn())
-}
+export const DEFAULT_ACCENT = '#4a90f0' // 하늘 파랑 (2026-11-06 #2f80ed에서 조금 연하게)
+/** 화면 모드·대표색은 고정 (화이트 + 하늘 파랑). 사용자 설정은 2026-11-06에 없앴다 */
+const FIXED: Appearance = { mode: 'light', accent: DEFAULT_ACCENT }
 
 export function useAppearance() {
-  return useSyncExternalStore(
-    (fn) => {
-      listeners.add(fn)
-      return () => listeners.delete(fn)
-    },
-    () => state,
-  )
+  return FIXED
 }
 
 /* ───────── 색 계산 ───────── */
@@ -84,9 +51,3 @@ export function onAccent(color: string) {
 
 /** 화면 모드별 배경색 (index.css와 같은 값) */
 export const BG: Record<Mode, string> = { light: '#ffffff', dark: '#111111' }
-
-/** 대표색으로 만든 커서 (라임 점 커서와 같은 모양) */
-export function cursorFor(color: string) {
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'><circle cx='8' cy='8' r='8' fill='${color}'/></svg>`
-  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 8 8, auto`
-}
