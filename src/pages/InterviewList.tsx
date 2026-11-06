@@ -14,7 +14,7 @@ const STEP = 10 // '더 보기' 한 번에 늘어나는 수
 /**
  * 화상 면접 기록 목록 (화면만): 텍스트 면접 목록과 같은 구성 (왼쪽 검색·태그·북마크, 이번 주 · 지난주 · 이전, 한 줄, 더 보기).
  * 한 줄: 점수 링 · 태그(주로 다룬 유형) · 첫 질문 · 날짜 · 북마크. 점수가 없으면 중간에 그만둔 면접(점선 원).
- * 화면 오른쪽 아래에 떠 있는 '면접 시작'으로 새 면접(기기 점검 → 면접)에 들어간다.
+ * 화면 오른쪽 아래에 떠 있는 '화상 면접 시작'으로 새 면접(기기 점검 → 면접)에 들어간다.
  * TODO: 기록을 누르면 결과 화면, 세션 API 연동
  */
 export default function InterviewList() {
@@ -46,10 +46,9 @@ export default function InterviewList() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-[760px]">
-        {/* 제목 아래 구분선 (텍스트 면접 목록과 같게) */}
-        <div className="border-b border-line pb-3">
-          <PageTitle title="화상 면접" />
+      <div className="mx-auto max-w-[760px] pb-20">
+        <div>
+          <PageTitle title="화상 면접" desc="AI 면접관 앞에서 말로 답하고, 꼬리 질문까지 연습해요." />
         </div>
 
         <div className="relative mt-8">
@@ -89,7 +88,7 @@ export default function InterviewList() {
           {items.length === 0 && (
             <p className="pt-16 text-center text-[14px] text-mute">
               {INTERVIEWS.length === 0
-                ? "아직 본 면접이 없어요. 오른쪽 아래 '면접 시작'으로 첫 면접을 시작해 보세요."
+                ? "아직 본 면접이 없어요. 오른쪽 아래 '화상 면접 시작'으로 첫 면접을 시작해 보세요."
                 : query.trim()
                   ? `‘${query.trim()}’에 맞는 면접이 없어요.`
                   : tag === '북마크'
@@ -108,15 +107,12 @@ export default function InterviewList() {
         </div>
       </div>
 
-      {/* 면접 시작: 화면 오른쪽 아래에 떠 있어 스크롤 중에도 바로 누를 수 있다 */}
+      {/* 면접 시작: 메인 하단 바의 파란 버튼과 같은 모양으로 오른쪽 아래에 떠 있다 */}
       <Link
         to="/app/interview/new"
-        className="fixed right-[var(--side)] bottom-8 z-20 flex h-12 items-center gap-2 rounded-full bg-cta pr-5 pl-4 text-[14px] font-semibold text-white shadow-[0_10px_30px_-8px_rgba(31,111,219,0.45)] transition-[transform,background-color] duration-200 hover:-translate-y-0.5 hover:bg-cta-hover"
+        className="fixed right-[var(--side)] bottom-8 z-20 rounded-full bg-toss px-6 py-3.5 text-[14px] font-semibold text-white shadow-[0_10px_24px_-8px_rgba(49,130,246,0.55)] transition-colors hover:bg-toss-hover"
       >
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h9A1.5 1.5 0 0 1 15 7.5v9a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 3 16.5v-9Z M15 10.5l6-3.5v10l-6-3.5" />
-        </svg>
-        면접 시작
+        화상 면접 시작
       </Link>
     </AppShell>
   )

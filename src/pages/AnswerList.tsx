@@ -58,9 +58,8 @@ export default function AnswerList() {
   return (
     <AppShell>
       <div className="mx-auto max-w-[760px]">
-        {/* 제목 아래 구분선 */}
-        <div className="relative border-b border-line pb-3">
-          <PageTitle title="텍스트 면접" />
+        <div className="relative">
+          <PageTitle title="텍스트 면접" desc="매일 받은 질문에 글로 답하고, 바로 피드백을 받아요." />
         </div>
 
         {/* 넓은 화면: 검색·태그를 가운데 목록 칸 바깥 왼쪽에 띄운다 (가운데는 질문만) */}

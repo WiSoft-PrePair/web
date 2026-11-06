@@ -1,7 +1,7 @@
 import { motion } from 'motion/react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
-import { AuthShell, KakaoButton, boxInput, tossButton } from '../components/auth'
+import { AuthShell, BrandLogo, KakaoButton, boxInput, tossButton } from '../components/auth'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -17,8 +17,11 @@ export default function Login() {
 
   return (
     <AuthShell header={false}>
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: EASE }}>
-        <h1 className="text-center font-display text-[40px] font-semibold tracking-tight text-paper">PREPAIR</h1>
+      {/* 로그인만 전체를 90% 크기로 (넓은 화면만. 모바일은 입력칸 글씨가 16px 아래로 내려가면 iOS가 확대하므로 그대로) */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: EASE }} className="sm:mx-auto sm:max-w-[400px] sm:[zoom:0.9]">
+        <h1 className="flex justify-center">
+          <BrandLogo size={34} />
+        </h1>
 
         <form onSubmit={onSubmit} className="mt-10 space-y-3">
           <input aria-label="이메일" placeholder="이메일" type="email" autoComplete="email" required className={boxInput} />

@@ -1,5 +1,6 @@
 import { animate, motion, useInView, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
+import logoMark from '../../assets/brand/logo-mark.png'
 
 /**
  * 랜딩 'HOW IT WORKS'에 쓰는 서비스 장면 목업. 화면에 들어오면 스스로 움직인다.
@@ -14,6 +15,7 @@ const LIME = '#e1ff6b'
 const VIOLET = '#8b7bff'
 const SKY = '#6cc7ff'
 const AMBER = '#ffb547'
+const TOSS = '#3182f6'
 
 /**
  * 카드 폭에 비례하는 크기. 기준은 데스크톱 카드 폭 655px(1440 화면), min은 좁은 화면에서의 최소값.
@@ -91,25 +93,26 @@ export function QuestionMock() {
   ]
 
   return (
-    <div ref={ref} className={`${frame} bg-[#141414]`}>
-      <Glow color="rgba(225,255,107,0.18)" className="-bottom-[30%] -left-[10%] h-[90%] w-[60%]" />
-      <Glow color="rgba(139,123,255,0.22)" className="-top-[30%] right-[-10%] h-[90%] w-[60%]" delay={2} />
+    // 밝은 카드 (랜딩 밝은 톤): 휴대폰만 어둡게, 강조는 토스 파랑
+    <div ref={ref} className={`${frame} bg-[#f4f7fb]`}>
+      <Glow color="rgba(49,130,246,0.16)" className="-bottom-[30%] -left-[10%] h-[90%] w-[60%]" />
+      <Glow color="rgba(139,123,255,0.14)" className="-top-[30%] right-[-10%] h-[90%] w-[60%]" delay={2} />
 
       {/* 휴대폰: 왼쪽, 카드 아래로 잘려 나간다 */}
       <div
-        className="absolute top-[9%] left-[8%] aspect-[9/19] w-[38%] overflow-hidden border-[#2b2b2b] bg-[linear-gradient(180deg,#232323,#0e0e0e)]"
+        className="absolute top-[9%] left-[8%] aspect-[9/19] w-[38%] overflow-hidden border-[#2b2b2b] bg-[linear-gradient(180deg,#232323,#0e0e0e)] text-white shadow-[0_24px_60px_-24px_rgba(16,24,40,0.45)]"
         style={{ borderWidth: cq(6, 4), borderRadius: cq(40, 22) }}
       >
         {/* 알림이 오면 화면이 켜지듯 밝아진다 */}
         <motion.div
           aria-hidden
-          className="absolute inset-0 bg-[radial-gradient(90%_60%_at_50%_0%,rgba(139,123,255,0.45),rgba(225,255,107,0.12)_60%,transparent)]"
+          className="absolute inset-0 bg-[radial-gradient(90%_60%_at_50%_0%,rgba(49,130,246,0.45),rgba(139,123,255,0.14)_60%,transparent)]"
           initial={{ opacity: 0.25 }}
           animate={{ opacity: rang ? 1 : 0.25 }}
           transition={{ duration: 1.2, ease: EASE }}
         />
         <div className="relative mx-auto w-[30%] rounded-full bg-black" style={{ marginTop: cq(10.3, 6), height: cq(17.2, 10) }} />
-        <p className="relative text-center text-soft" style={{ marginTop: cq(13.8, 6), fontSize: cq(10.3, 8) }}>
+        <p className="relative text-center text-white/70" style={{ marginTop: cq(13.8, 6), fontSize: cq(10.3, 8) }}>
           11월 5일 수요일
         </p>
         <div className="relative overflow-hidden text-center font-display leading-none font-semibold tracking-tight" style={{ fontSize: cq(55, 26), height: '1em' }}>
@@ -135,23 +138,21 @@ export function QuestionMock() {
             style={{ padding: `${cq(15, 8)} ${cq(15, 8)} ${cq(16, 9)}`, borderRadius: cq(15.5, 10) }}
           >
             <div className="flex items-center" style={{ gap: cq(6.9, 4) }}>
-              <span
-                className="grid place-items-center font-display font-bold text-ink"
-                style={{ background: LIME, width: cq(24.1, 14), height: cq(24.1, 14), borderRadius: cq(6.9, 4), fontSize: cq(12, 8) }}
-              >
-                P
+              {/* 앱 아이콘: 흰 칸 안 로고 마크 */}
+              <span className="grid place-items-center bg-white" style={{ width: cq(24.1, 14), height: cq(24.1, 14), borderRadius: cq(6.9, 4) }}>
+                <img src={logoMark} alt="" style={{ width: '72%', height: '72%' }} />
               </span>
               <span className="font-semibold" style={{ fontSize: cq(12, 9) }}>
                 PrePair
               </span>
-              <span className="ml-auto text-soft" style={{ fontSize: cq(10.3, 8) }}>
+              <span className="ml-auto text-white/60" style={{ fontSize: cq(10.3, 8) }}>
                 지금
               </span>
             </div>
             <p className="font-semibold" style={{ marginTop: cq(10, 5), fontSize: cq(12, 9) }}>
               오늘의 질문이 도착했어요
             </p>
-            <p className="leading-relaxed text-soft" style={{ fontSize: cq(11.2, 9), marginTop: cq(3, 1) }}>
+            <p className="leading-relaxed text-white/70" style={{ fontSize: cq(11.2, 9), marginTop: cq(3, 1) }}>
               최근에 가장 몰입해서 해낸 일은 무엇이었나요?
             </p>
           </motion.div>
@@ -172,22 +173,22 @@ export function QuestionMock() {
               style={{
                 padding: `${cq(11, 5)} ${cq(16, 7)}`,
                 borderRadius: cq(12, 7),
-                borderColor: accent ? 'rgba(225,255,107,0.55)' : 'rgba(255,255,255,0.08)',
-                background: accent ? 'linear-gradient(135deg, rgba(225,255,107,0.12), rgba(139,123,255,0.10))' : 'rgba(255,255,255,0.03)',
-                boxShadow: accent ? '0 0 32px -8px rgba(225,255,107,0.45)' : undefined,
+                borderColor: accent ? 'rgba(49,130,246,0.5)' : 'rgba(16,24,40,0.06)',
+                background: accent ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.7)',
+                boxShadow: accent ? '0 8px 28px -10px rgba(49,130,246,0.45)' : '0 1px 2px rgba(16,24,40,0.04)',
               }}
             >
               <p className="text-mute" style={{ fontSize: cq(11, 8) }}>
                 {it.label}
               </p>
-              <p className="font-medium" style={{ fontSize: cq(15, 9), marginTop: cq(2, 1), color: accent ? LIME : undefined }}>
+              <p className="font-medium text-paper" style={{ fontSize: cq(15, 9), marginTop: cq(2, 1), color: accent ? TOSS : undefined }}>
                 {accent ? (
                   <>
                     {typed(t)}
                     <motion.span
                       aria-hidden
                       className="ml-px inline-block align-[-0.1em]"
-                      style={{ width: 2, height: '1em', background: LIME }}
+                      style={{ width: 2, height: '1em', background: TOSS }}
                       animate={{ opacity: [1, 0] }}
                       transition={{ duration: 0.6, repeat: Infinity, repeatType: 'reverse' }}
                     />

@@ -3,7 +3,7 @@ import { type FormEvent, type ReactNode, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { ChoiceCards } from '../components/prefs'
 import { CHANNELS, type Channel, FREQUENCY } from '../components/prefsOptions'
-import { AuthShell, EyeToggle, bareInput, boxInput, boxWrap, tossButton } from '../components/auth'
+import { AuthShell, BrandLogo, EyeToggle, bareInput, boxInput, boxWrap, tossButton } from '../components/auth'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 /** 단계 내용 넘김: 앞으로 가면 오른쪽에서 들어와 왼쪽으로, 뒤로 가면 반대 */
@@ -78,6 +78,8 @@ export default function Signup() {
 
   return (
     <AuthShell header={false} align={typeof step === 'number' ? 'top' : 'center'}>
+      {/* 로그인처럼 전체를 90% 크기로 (넓은 화면만. 모바일은 입력칸 글씨가 16px 아래로 내려가면 iOS가 확대하므로 그대로) */}
+      <div className="sm:mx-auto sm:max-w-[400px] sm:[zoom:0.9]">
       <AnimatePresence mode="wait">
         {typeof step === 'number' ? (
           <motion.div key="steps" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.45, ease: EASE }}>
@@ -225,6 +227,7 @@ export default function Signup() {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
 
     </AuthShell>
   )
@@ -272,16 +275,20 @@ function Stepper({ step, canGoNext, onGo, onBack }: { step: 1 | 2; canGoNext: bo
   ]
   return (
     <div>
-      <button
-        type="button"
-        onClick={onBack}
-        aria-label="이전"
-        className="-ml-2 mb-4 grid h-9 w-9 place-items-center rounded-full text-soft transition-colors hover:bg-tint/[0.06] hover:text-paper"
-      >
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M15 5l-7 7 7 7" />
-        </svg>
-      </button>
+      {/* 맨 위 줄: 왼쪽 이전, 가운데 작은 로고 (작성 중 실수로 나가지 않게 로고엔 링크를 걸지 않는다) */}
+      <div className="relative mb-4 flex h-9 items-center justify-center">
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="이전"
+          className="absolute left-0 -ml-2 grid h-9 w-9 place-items-center rounded-full text-soft transition-colors hover:bg-tint/[0.06] hover:text-paper"
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
+        </button>
+        <BrandLogo size={17} />
+      </div>
       <div className="mb-1 flex items-baseline justify-between">
         <AnimatePresence mode="wait" initial={false}>
           <motion.span

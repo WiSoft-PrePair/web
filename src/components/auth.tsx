@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
+import logoMark from '../assets/brand/logo-mark.png'
 import { Panel, ThemeRoot } from './AppShell'
 
 /** 로그인·회원가입 공통 틀: 로고만 있는 헤더(랜딩과 같은 위치) + 가운데 한 열 */
@@ -38,6 +39,23 @@ export function AuthShell({ children, top, align = 'center', header = true }: { 
         )}
       </div>
     </ThemeRoot>
+  )
+}
+
+/**
+ * 로고: 마크 + PREPAIR(Fredoka). size = 글씨 크기(px), 마크는 글씨보다 조금 크게.
+ * 마크가 왼쪽 아래로 무거워 가운데에 두면 살짝 왼쪽으로 보여서, 글씨 크기의 5%(최소 1px)만큼 오른쪽으로 옮긴다 (가운데 정렬이 아닌 곳은 nudge={false})
+ */
+export function BrandLogo({ size = 20, className = '', nudge = true }: { size?: number; className?: string; nudge?: boolean }) {
+  const mark = Math.round(size * 1.15)
+  return (
+    <span
+      className={`inline-flex items-center font-['Fredoka'] leading-none font-semibold text-paper ${className}`}
+      style={{ fontSize: size, gap: Math.round(size * 0.4), transform: nudge ? `translateX(${Math.max(1, Math.round(size * 0.05))}px)` : undefined }}
+    >
+      <img src={logoMark} alt="" width={mark} height={mark} style={{ width: mark, height: mark }} />
+      PREPAIR
+    </span>
   )
 }
 

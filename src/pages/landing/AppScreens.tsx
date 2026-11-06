@@ -1,20 +1,19 @@
 import { motion } from 'motion/react'
 import feedback from '../../assets/landing/feedback.jpg'
-import home from '../../assets/landing/home.jpg'
 import text from '../../assets/landing/text.jpg'
 import video from '../../assets/landing/video.jpg'
 
 /**
- * 랜딩 'HOW IT WORKS' 카드: 실제 앱 화면(다크 모드 캡처)을 브라우저 창 틀에 담아 보여 준다.
+ * 랜딩 'HOW IT WORKS' 카드: 실제 앱 화면(밝은 테마 캡처)을 밝은 브라우저 창 틀에 담아 보여 준다.
  * 캡처는 src/assets/landing/*.jpg (1440×900, 2배). 화면이 바뀌면 다시 찍어 교체한다.
  */
 
 const frame = 'relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-line md:aspect-[16/10]'
 const EASE = [0.22, 1, 0.36, 1] as const
 
-/** 카드 안 색 번짐 배경 (카드 안에서만 색을 쓴다) */
+/** 카드 안 은은한 색 번짐 배경 (밝은 바탕) */
 const glow = (a: string, b: string) => ({
-  background: `radial-gradient(60% 70% at 15% 100%, ${a}, transparent 70%), radial-gradient(55% 60% at 90% 0%, ${b}, transparent 70%), #141414`,
+  background: `radial-gradient(60% 70% at 15% 100%, ${a}, transparent 70%), radial-gradient(55% 60% at 90% 0%, ${b}, transparent 70%), #f4f7fb`,
 })
 
 function Window({ src, alt, className, delay = 0 }: { src: string; alt: string; className: string; delay?: number }) {
@@ -24,10 +23,10 @@ function Window({ src, alt, className, delay = 0 }: { src: string; alt: string; 
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-10%' }}
       transition={{ duration: 1, delay, ease: EASE }}
-      className={`absolute overflow-hidden rounded-[10px] border border-white/10 bg-[#111] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)] ${className}`}
+      className={`absolute overflow-hidden rounded-[10px] border border-black/[0.06] bg-white shadow-[0_24px_60px_-24px_rgba(16,24,40,0.35)] ${className}`}
     >
       {/* 브라우저 상단 바 */}
-      <div className="flex h-[22px] items-center gap-1.5 border-b border-white/[0.06] bg-[#1a1a1a] px-2.5">
+      <div className="flex h-[22px] items-center gap-1.5 border-b border-black/[0.05] bg-[#f2f4f6] px-2.5">
         <span className="h-[7px] w-[7px] rounded-full bg-[#ff5f57]" />
         <span className="h-[7px] w-[7px] rounded-full bg-[#febc2e]" />
         <span className="h-[7px] w-[7px] rounded-full bg-[#28c840]" />
@@ -37,30 +36,29 @@ function Window({ src, alt, className, delay = 0 }: { src: string; alt: string; 
   )
 }
 
-/** 01 · 메인: 오늘의 질문과 답변 기록 */
-export function HomeScreen() {
+/** 02 · 텍스트 면접: 질문 + STAR 안내 + 답 적는 중 */
+export function TextScreen() {
   return (
-    <div className={frame} style={glow('rgba(225,255,107,0.22)', 'rgba(139,123,255,0.28)')}>
-      <Window src={home} alt="PrePair 메인 화면: 오늘의 질문, 다시 답해 볼 질문, 답변 기록 잔디" className="top-[10%] left-1/2 w-[88%] -translate-x-1/2" />
+    <div className={frame} style={glow('rgba(49,130,246,0.14)', 'rgba(139,123,255,0.14)')}>
+      <Window src={text} alt="텍스트 면접 화면: 질문, STAR 안내, 답변 입력, 답변 기록" className="top-[10%] left-[6%] w-[112%]" />
     </div>
   )
 }
 
-/** 02 · 텍스트 면접(뒤) + 화상 면접(앞) */
-export function InterviewScreens() {
+/** 03 · 화상 면접: 이력서 기반 질문 카드 + AI 면접관 + 내 카메라 (요소가 화면 네 귀퉁이에 퍼져 있어 창 전체를 보여 준다) */
+export function VideoScreen() {
   return (
-    <div className={frame} style={glow('rgba(108,199,255,0.22)', 'rgba(139,123,255,0.3)')}>
-      <Window src={text} alt="텍스트 면접 화면: 질문, STAR 가이드, 답변 입력" className="top-[7%] left-[5%] w-[70%]" />
-      <Window src={video} alt="화상 면접 화면: AI 면접관과 내 카메라, 질문 자막" className="top-[30%] right-[5%] w-[66%]" delay={0.15} />
+    <div className={frame} style={glow('rgba(139,123,255,0.16)', 'rgba(49,130,246,0.14)')}>
+      <Window src={video} alt="화상 면접 화면: 이력서 기반 질문, AI 면접관, 내 카메라, 마이크·카메라 조작" className="top-[9%] left-1/2 w-[88%] -translate-x-1/2" />
     </div>
   )
 }
 
-/** 03 · 답변 피드백 창 */
+/** 04 · 답변 피드백: 점수 · 좋았던 점 · 고칠 점 · 더 나은 답 */
 export function FeedbackScreen() {
   return (
-    <div className={frame} style={glow('rgba(255,181,71,0.18)', 'rgba(225,255,107,0.2)')}>
-      <Window src={feedback} alt="답변 피드백 화면: 점수, 총평, STAR 체크, 좋았던 점과 고칠 점" className="top-[10%] right-[6%] w-[118%]" />
+    <div className={frame} style={glow('rgba(255,181,71,0.14)', 'rgba(49,130,246,0.14)')}>
+      <Window src={feedback} alt="답변 피드백 화면: 점수, 좋았던 점, 고칠 점, 이렇게 바꿔 보면 좋은 점" className="top-[10%] left-[6%] w-[112%]" />
     </div>
   )
 }

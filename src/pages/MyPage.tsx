@@ -1,9 +1,9 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router'
 import { AppShell, PageTitle } from '../components/AppShell'
 import { tossButton } from '../components/auth'
+import { ChoiceCards } from '../components/prefs'
 import { FREQUENCY } from '../components/prefsOptions'
 
 const EASE = [0.22, 1, 0.36, 1] as const
@@ -11,13 +11,12 @@ const EASE = [0.22, 1, 0.36, 1] as const
 type Sheet = 'nickname' | 'job' | 'frequency' | null
 
 /**
- * 마이페이지 (화면만, 토스식 목록): 프로필 카드 → 묶음별 흰 카드(내 정보 · 질문 알림 · 계정) → 회원 탈퇴.
+ * 마이페이지 (화면만, 토스식 목록): 묶음별 흰 카드(내 정보: 이메일(보기만)·닉네임·희망 직무 · 질문 알림). 로그아웃·회원 탈퇴는 헤더 프로필 메뉴로 옮김. 넓은 화면은 90% 크기.
  * 행 = 이름 | 현재 값 + 화살표, 누르면 편집 창(모바일은 아래에서, 넓은 화면은 가운데).
  * 알림 채널은 스위치로 바로 적용. 저장 버튼 없이 바뀔 때마다 저장(목업은 토스트만).
  * TODO: GET /api/auth/me 로 채우고, 바뀔 때마다 member-service 수정 API 호출
  */
 export default function MyPage() {
-  const navigate = useNavigate()
   const [nickname, setNickname] = useState('우민')
   const accountEmail = 'woomin@example.com' // 목업
   const [job, setJob] = useState('백엔드 개발자 (Spring, 대용량 트래픽 경험 위주)')
@@ -49,18 +48,13 @@ export default function MyPage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-[560px]">
+      {/* 넓은 화면은 전체를 90% 크기로 (모바일은 입력칸 확대 문제로 그대로) */}
+      <div className="mx-auto max-w-[560px] sm:[zoom:0.9]">
         <PageTitle title="마이페이지" />
 
-        {/* 프로필: 닉네임 + 이메일 (프로필 사진은 두지 않음) */}
-        <div className="mt-8 rounded-3xl bg-card p-6 shadow-card">
-          <span className="block min-w-0">
-            <span className="block truncate text-[20px] font-semibold text-paper">{nickname}</span>
-            <span className="mt-0.5 block truncate text-[14px] text-mute">{accountEmail}</span>
-          </span>
-        </div>
-
         <Section title="내 정보">
+          {/* 로그인 이메일은 바꿀 수 없어 보기만 (화살표 없음) */}
+          <InfoRow label="이메일" value={accountEmail} />
           <ValueRow label="닉네임" value={nickname} onClick={() => setSheet('nickname')} />
           <ValueRow label="희망 직무" value={job} onClick={() => setSheet('job')} />
         </Section>
@@ -71,24 +65,14 @@ export default function MyPage() {
           <ValueRow label="알림 주기" value={freqText(freq)} onClick={() => setSheet('frequency')} />
         </Section>
 
-        <Section title="계정">
-          <ValueRow label="비밀번호 변경" value="" onClick={() => notify('비밀번호 변경은 준비 중이에요')} />
-          {/* TODO: POST /api/auth/logout 연동 */}
-          <ValueRow label="로그아웃" value="" onClick={() => navigate('/login')} />
-        </Section>
-
-        {/* 탈퇴는 눈에 덜 띄게 카드 밖 아래에 */}
-        <div className="mt-6 flex justify-end">
-          <button type="button" onClick={() => notify('회원 탈퇴는 준비 중이에요')} className="px-1 text-[13px] text-mute underline-offset-4 transition-colors hover:text-soft hover:underline">
-            회원 탈퇴
-          </button>
-        </div>
-
       </div>
 
-      <BottomSheet open={sheet === 'nickname'} title="닉네임" onClose={() => setSheet(null)}>
+      <BottomSheet open={sheet === 'nickname'} title="닉네임 바꾸기" desc="면접과 알림에서 이 이름으로 불러 드려요." onClose={() => setSheet(null)}>
         <TextEdit
           initial={nickname}
+          max={12}
+          placeholder="어떻게 불러 드릴까요?"
+          onCancel={() => setSheet(null)}
           onDone={(v) => {
             setNickname(v)
             setSheet(null)
@@ -96,11 +80,13 @@ export default function MyPage() {
           }}
         />
       </BottomSheet>
-      <BottomSheet open={sheet === 'job'} title="희망 직무" onClose={() => setSheet(null)}>
+      <BottomSheet open={sheet === 'job'} title="희망 직무" desc="자유롭게 적을수록 질문이 더 잘 맞춰져요." onClose={() => setSheet(null)}>
         <TextEdit
           multiline
-          hint="자유롭게 적을수록 질문이 더 잘 맞춰져요."
+          max={100}
+          placeholder="예: 백엔드 개발자 (Spring, 대용량 트래픽)"
           initial={job}
+          onCancel={() => setSheet(null)}
           onDone={(v) => {
             setJob(v)
             setSheet(null)
@@ -108,37 +94,17 @@ export default function MyPage() {
           }}
         />
       </BottomSheet>
-      <BottomSheet open={sheet === 'frequency'} title="알림 주기" onClose={() => setSheet(null)}>
-        <ul role="radiogroup" aria-label="알림 주기" className="-mx-2">
-          {FREQUENCY.map((f) => {
-            const on = f.value === frequency
-            return (
-              <li key={f.value}>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={on}
-                  onClick={() => {
-                    setFrequency(f.value)
-                    setSheet(null)
-                    notify('저장했어요')
-                  }}
-                  className="flex w-full items-center justify-between rounded-xl px-2 py-3.5 text-left transition-colors hover:bg-tint/[0.04]"
-                >
-                  <span>
-                    <span className={`text-[16px] ${on ? 'font-medium text-paper' : 'text-soft'}`}>{f.label}</span>
-                    <span className="ml-2 text-[14px] text-mute">{f.sub.replace(/[()]/g, '')}</span>
-                  </span>
-                  {on && (
-                    <svg viewBox="0 0 24 24" className="h-5 w-5 text-toss" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <path d="M5 12.5l4.5 4.5L19 7.5" />
-                    </svg>
-                  )}
-                </button>
-              </li>
-            )
-          })}
-        </ul>
+      <BottomSheet open={sheet === 'frequency'} title="알림 주기" desc="질문을 받을 때를 골라 주세요." onClose={() => setSheet(null)}>
+        {/* 회원가입과 같은 선택 카드: 고르면 바로 저장하고 닫힌다 */}
+        <ChoiceCards
+          options={FREQUENCY}
+          isOn={(v) => v === frequency}
+          onPick={(v) => {
+            setFrequency(v)
+            setSheet(null)
+            notify('저장했어요')
+          }}
+        />
       </BottomSheet>
 
       {/* 저장 알림 */}
@@ -185,6 +151,15 @@ function ValueRow({ label, value, onClick }: { label: string; value: ReactNode; 
   )
 }
 
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-4 px-3.5 py-3.5">
+      <span className="shrink-0 text-[16px] text-paper">{label}</span>
+      <span className="ml-auto min-w-0 truncate text-[15px] text-mute">{value}</span>
+    </div>
+  )
+}
+
 function SwitchRow({ label, on, onToggle }: { label: string; on: boolean; onToggle: () => void }) {
   return (
     <button type="button" role="switch" aria-checked={on} onClick={onToggle} className={`justify-between ${rowClass}`}>
@@ -203,8 +178,8 @@ function SwitchRow({ label, on, onToggle }: { label: string; on: boolean; onTogg
 
 /* ───────── 편집 창 ───────── */
 
-/** 모바일은 아래에서 올라오는 시트, 넓은 화면은 가운데 창 */
-function BottomSheet({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: ReactNode }) {
+/** 모바일은 아래에서 올라오는 시트(손잡이 막대), 넓은 화면은 가운데 창. 제목 + 한 줄 설명 + 오른쪽 위 닫기 */
+function BottomSheet({ open, title, desc, onClose, children }: { open: boolean; title: string; desc?: string; onClose: () => void; children: ReactNode }) {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -216,20 +191,31 @@ function BottomSheet({ open, title, onClose, children }: { open: boolean; title:
   return createPortal(
     <AnimatePresence>
       {open && (
-        <motion.div data-theme="light" className="fixed inset-0 z-50 flex items-end justify-center md:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <button type="button" aria-label="닫기" onClick={onClose} className="absolute inset-0 bg-black/40" />
+        <motion.div data-theme="light" className="fixed inset-0 z-50 flex items-end justify-center md:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+          <button type="button" aria-label="닫기" onClick={onClose} className="absolute inset-0 bg-black/35" />
           <motion.div
             role="dialog"
             aria-modal="true"
             aria-label={title}
-            initial={{ y: 40, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 40, opacity: 0 }}
-            transition={{ duration: 0.3, ease: EASE }}
-            className="relative w-full max-w-[440px] rounded-t-3xl bg-card px-6 pt-6 pb-8 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.35)] md:rounded-3xl md:pb-6"
+            initial={{ y: 32, opacity: 0, scale: 0.98 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: 32, opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.28, ease: EASE }}
+            className="relative w-full max-w-[420px] rounded-t-[28px] bg-card px-6 pt-3 pb-7 shadow-[0_24px_64px_-24px_rgba(16,24,40,0.4)] md:rounded-[28px] md:pt-6 md:pb-6"
           >
-            <h2 className="mb-4 text-[18px] font-semibold text-paper">{title}</h2>
-            {children}
+            <span aria-hidden className="mx-auto mb-4 block h-1 w-10 rounded-full bg-tint/15 md:hidden" />
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-[19px] font-semibold tracking-tight text-paper">{title}</h2>
+                {desc && <p className="mt-1 text-[14px] text-mute">{desc}</p>}
+              </div>
+              <button type="button" onClick={onClose} aria-label="닫기" className="-mt-1 -mr-2 grid h-9 w-9 shrink-0 place-items-center rounded-full text-mute transition-colors hover:bg-tint/[0.06] hover:text-paper">
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                  <path d="M6 6l12 12M18 6 6 18" />
+                </svg>
+              </button>
+            </div>
+            <div className="mt-5">{children}</div>
           </motion.div>
         </motion.div>
       )}
@@ -238,24 +224,48 @@ function BottomSheet({ open, title, onClose, children }: { open: boolean; title:
   )
 }
 
-function TextEdit({ initial, onDone, multiline = false, hint }: { initial: string; onDone: (v: string) => void; multiline?: boolean; hint?: string }) {
+/** 글 고치기: 회색 칸 + 글자 수, 아래 취소 · 저장 (바뀐 게 없거나 비면 저장 막음) */
+function TextEdit({
+  initial,
+  onDone,
+  onCancel,
+  multiline = false,
+  max,
+  placeholder,
+}: {
+  initial: string
+  onDone: (v: string) => void
+  onCancel: () => void
+  multiline?: boolean
+  max: number
+  placeholder?: string
+}) {
   const [value, setValue] = useState(initial)
+  const trimmed = value.trim()
+  const canSave = trimmed !== '' && trimmed !== initial.trim()
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    if (value.trim()) onDone(value.trim())
+    if (canSave) onDone(trimmed)
   }
-  const field = 'w-full rounded-2xl border border-line bg-card px-5 py-[14px] text-[16px] leading-6 text-paper outline-none transition-colors focus:border-dim'
+  const field = 'w-full rounded-2xl border border-transparent bg-tint/[0.04] px-4 py-3.5 text-[16px] leading-6 text-paper outline-none transition-colors placeholder:text-dim focus:border-dim focus:bg-card'
   return (
     <form onSubmit={submit}>
       {multiline ? (
-        <textarea autoFocus rows={3} value={value} onChange={(e) => setValue(e.target.value)} className={`${field} block resize-none`} />
+        <textarea autoFocus rows={3} maxLength={max} placeholder={placeholder} value={value} onChange={(e) => setValue(e.target.value)} className={`${field} block resize-none`} />
       ) : (
-        <input autoFocus value={value} onChange={(e) => setValue(e.target.value)} className={field} />
+        <input autoFocus maxLength={max} placeholder={placeholder} value={value} onChange={(e) => setValue(e.target.value)} className={field} />
       )}
-      {hint && <p className="mt-2 text-xs text-mute">{hint}</p>}
-      <button type="submit" disabled={!value.trim()} className={`mt-5 ${tossButton}`}>
-        완료
-      </button>
+      <p className="mt-2 text-right text-[12px] text-mute tabular-nums">
+        {value.length} / {max}
+      </p>
+      <div className="mt-4 grid grid-cols-[1fr_2fr] gap-2">
+        <button type="button" onClick={onCancel} className="h-[54px] rounded-2xl bg-tint/[0.05] text-[16px] font-semibold text-soft transition-colors hover:bg-tint/[0.08]">
+          취소
+        </button>
+        <button type="submit" disabled={!canSave} className={tossButton}>
+          저장
+        </button>
+      </div>
     </form>
   )
 }
