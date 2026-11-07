@@ -1,36 +1,32 @@
 import { MotionConfig } from 'motion/react'
-import { StrictMode } from 'react'
+import { type ComponentType, StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router'
 import './index.css'
 import RequireAuth from './components/RequireAuth'
-import Landing from './pages/Landing'
-import AnswerList from './pages/AnswerList'
-import InterviewList from './pages/InterviewList'
-import KakaoCallback from './pages/KakaoCallback'
-import Login from './pages/Login'
-import MockInterview from './pages/MockInterview'
-import MyPage from './pages/MyPage'
-import ResetPassword from './pages/ResetPassword'
-import ServiceHome from './pages/ServiceHome'
-import Signup from './pages/Signup'
-import TextAnswer from './pages/TextAnswer'
+
+
+/**
+ * 첫 화면(랜딩)만 바로 싣고, 나머지 화면은 들어갈 때 따로 받는다(라우트별 코드 분할).
+ * 라우터가 다음 화면 코드를 다 받은 뒤 넘어가므로 빈 화면이 깜빡이지 않는다.
+ */
+const page = (load: () => Promise<{ default: ComponentType }>) => async () => ({ Component: (await load()).default })
 
 const router = createBrowserRouter([
-  { path: '/', element: <Landing /> },
-  { path: '/login', element: <Login /> },
-  { path: '/signup', element: <Signup /> },
-  { path: '/password-reset', element: <ResetPassword /> },
-  { path: '/auth/kakao/callback', element: <KakaoCallback /> },
+  { path: '/', lazy: page(() => import('./pages/Landing')) },
+  { path: '/login', lazy: page(() => import('./pages/Login')) },
+  { path: '/signup', lazy: page(() => import('./pages/Signup')) },
+  { path: '/password-reset', lazy: page(() => import('./pages/ResetPassword')) },
+  { path: '/auth/kakao/callback', lazy: page(() => import('./pages/KakaoCallback')) },
   {
     element: <RequireAuth />,
     children: [
-      { path: '/app', element: <ServiceHome /> },
-      { path: '/app/answer', element: <AnswerList /> },
-      { path: '/app/answer/:id', element: <TextAnswer /> },
-      { path: '/app/interview', element: <InterviewList /> },
-      { path: '/app/interview/new', element: <MockInterview /> },
-      { path: '/app/me', element: <MyPage /> },
+      { path: '/app', lazy: page(() => import('./pages/ServiceHome')) },
+      { path: '/app/answer', lazy: page(() => import('./pages/AnswerList')) },
+      { path: '/app/answer/:id', lazy: page(() => import('./pages/TextAnswer')) },
+      { path: '/app/interview', lazy: page(() => import('./pages/InterviewList')) },
+      { path: '/app/interview/new', lazy: page(() => import('./pages/MockInterview')) },
+      { path: '/app/me', lazy: page(() => import('./pages/MyPage')) },
     ],
   },
 ])

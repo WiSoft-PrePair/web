@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router'
-import logoMark from '../assets/brand/logo-mark.png'
+import logoMark from '../assets/brand/logo-mark.webp'
 import { logout, useMember } from '../lib/api'
 import { BG, onAccent, readableOn, useAppearance } from './appearance'
 

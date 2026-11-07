@@ -1,6 +1,6 @@
 import { animate, motion, useInView, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
-import logoMark from '../../assets/brand/logo-mark.png'
+import logoMark from '../../assets/brand/logo-mark.webp'
 
 /**
  * 랜딩 'HOW IT WORKS'에 쓰는 서비스 장면 목업. 화면에 들어오면 스스로 움직인다.

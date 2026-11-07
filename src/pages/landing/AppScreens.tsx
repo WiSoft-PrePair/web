@@ -1,11 +1,11 @@
 import { motion } from 'motion/react'
-import feedback from '../../assets/landing/feedback.jpg'
-import text from '../../assets/landing/text.jpg'
-import video from '../../assets/landing/video.jpg'
+import feedback from '../../assets/landing/feedback.webp'
+import text from '../../assets/landing/text.webp'
+import video from '../../assets/landing/video.webp'
 
 /**
  * 랜딩 'HOW IT WORKS' 카드: 실제 앱 화면(밝은 테마 캡처)을 밝은 브라우저 창 틀에 담아 보여 준다.
- * 캡처는 src/assets/landing/*.jpg (1440×900, 2배). 화면이 바뀌면 다시 찍어 교체한다.
+ * 캡처는 src/assets/landing/*.webp (1440×900, 2배). 화면이 바뀌면 다시 찍어 교체한다.
  */
 
 const frame = 'relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-line md:aspect-[16/10]'

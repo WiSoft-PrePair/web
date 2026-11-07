@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
-import logoMark from '../assets/brand/logo-mark.png'
+import logoMark from '../assets/brand/logo-mark.webp'
 import { Panel, ThemeRoot } from './AppShell'
 
 /** 로그인·회원가입 공통 틀: 로고만 있는 헤더(랜딩과 같은 위치) + 가운데 한 열 */

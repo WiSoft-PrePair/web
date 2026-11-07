@@ -1,7 +1,7 @@
 import { motion, useAnimationFrame, useMotionValue, useScroll, useTransform } from 'motion/react'
 import { type ReactNode, useLayoutEffect, useRef } from 'react'
 import { Link } from 'react-router'
-import logoMark from '../assets/brand/logo-mark.png'
+import logoMark from '../assets/brand/logo-mark.webp'
 import { ThemeRoot } from '../components/AppShell'
 import { BrandLogo } from '../components/auth'
 import Header from '../components/Header'

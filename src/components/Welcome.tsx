@@ -1,5 +1,5 @@
 import { motion } from 'motion/react'
-import logoMark from '../assets/brand/logo-mark.png'
+import logoMark from '../assets/brand/logo-mark.webp'
 import { tossButton } from './auth'
 
 const EASE = [0.22, 1, 0.36, 1] as const

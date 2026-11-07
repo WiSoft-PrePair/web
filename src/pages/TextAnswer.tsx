@@ -1,6 +1,5 @@
-import Lenis from 'lenis'
-import { AnimatePresence, cancelFrame, frame, motion } from 'motion/react'
-import { type FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import { type FormEvent, useLayoutEffect, useRef, useState } from 'react'
 import { Link, Navigate, useLocation, useParams } from 'react-router'
 import { AppShell } from '../components/AppShell'
 import { BookmarkButton } from '../components/BookmarkButton'
@@ -91,20 +90,6 @@ function AnswerDoc({ record }: { record: QuestionRecord }) {
     ro.observe(list)
     return () => ro.disconnect()
   }, [attempts.length])
-
-  // 답변 기록 목록만 부드럽게 스크롤 (랜딩과 같은 Lenis, 이 상자 안에서만)
-  useEffect(() => {
-    const box = historyBox.current
-    const content = box?.firstElementChild as HTMLElement | null
-    if (!box || !content || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const lenis = new Lenis({ wrapper: box, content, duration: 0.9, smoothWheel: true })
-    const update = ({ timestamp }: { timestamp: number }) => lenis.raf(timestamp)
-    frame.update(update, true)
-    return () => {
-      cancelFrame(update)
-      lenis.destroy()
-    }
-  }, [])
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
