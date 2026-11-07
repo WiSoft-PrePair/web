@@ -127,9 +127,9 @@ body {
   word-break: keep-all;
 }
 
+/* 드래그로 고른 글자: 형광 대신 옅은 토스 파랑, 글자색은 그대로 */
 ::selection {
-  background: var(--color-lime);
-  color: var(--color-ink);
+  background: rgb(49 130 246 / 0.18);
 }
 
 /* 라임 점 커서: OS 커서 이미지라 지연이 없다 */
