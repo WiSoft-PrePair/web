@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router'
 import logoMark from '../assets/brand/logo-mark.png'
+import { logout, useMember } from '../lib/api'
 import { BG, onAccent, readableOn, useAppearance } from './appearance'
 
 /** 로그인 후 화면 공통 틀: 고정 헤더 + 가운데 본문 */
@@ -101,7 +102,7 @@ export function AppHeader() {
             {menu}
           </nav>
           <div className="-mr-1.5 justify-self-end">
-            <ProfileMenu onLogout={() => navigate('/login')} onWithdraw={() => soon('회원 탈퇴')} />
+            <ProfileMenu onLogout={() => logout().then(() => navigate('/login', { replace: true }))} onWithdraw={() => soon('회원 탈퇴')} />
           </div>
         </div>
         <nav aria-label="메뉴" className="flex gap-2 overflow-x-auto px-[calc(var(--side)-12px)] pb-1.5 text-[14px] text-soft [scrollbar-width:none] md:hidden">
@@ -131,6 +132,7 @@ export function AppHeader() {
 function ProfileMenu({ onLogout, onWithdraw }: { onLogout: () => void; onWithdraw: () => void }) {
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
+  const member = useMember()
   useEffect(() => {
     if (!open) return
     const onDown = (e: PointerEvent) => {
@@ -171,16 +173,15 @@ function ProfileMenu({ onLogout, onWithdraw }: { onLogout: () => void; onWithdra
             transition={{ duration: 0.15 }}
             className="absolute top-full right-0 mt-2 w-56 rounded-2xl border border-line bg-card p-1.5 shadow-[0_12px_32px_-12px_rgba(16,24,40,0.25)]"
           >
-            {/* TODO: 회원 API에서 닉네임·이메일 */}
+            {/* 로그인할 때 받은 닉네임 · 이메일 (카카오 로그인은 이메일을 /api/auth/me로 채운다) */}
             <div className="px-3 pt-2 pb-2.5">
-              <p className="text-[14px] font-semibold text-paper">우민</p>
-              <p className="mt-0.5 truncate text-[12px] text-mute">woomin@example.com</p>
+              <p className="text-[14px] font-semibold text-paper">{member?.nickname ?? '회원'}</p>
+              {member?.email && <p className="mt-0.5 truncate text-[12px] text-mute">{member.email}</p>}
             </div>
             <div className="mx-1.5 mb-1 border-t border-line" />
             <Link role="menuitem" to="/app/me" onClick={() => setOpen(false)} className={row}>
               마이페이지
             </Link>
-            {/* TODO: POST /api/auth/logout 연동 */}
             <button role="menuitem" type="button" onClick={onLogout} className={row}>
               로그아웃
             </button>

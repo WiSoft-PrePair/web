@@ -5,6 +5,7 @@ import { AppHeader, Panel, ThemeRoot } from '../components/AppShell'
 import { InterviewBar } from '../components/InterviewBar'
 import { ScoreRing } from '../components/ScoreRing'
 import { QUESTIONS } from '../data/questions'
+import { useMember } from '../lib/api'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -36,9 +37,8 @@ export default function ServiceHome() {
 /* ───────── 오늘의 질문 ───────── */
 
 /** 가운데에 오늘의 질문 (바로가기는 헤더 메뉴로 옮김) */
-const NICKNAME = '우민' // 목업
-
 function TodayQuestion() {
+  const nickname = useMember()?.nickname ?? '회원'
   const today = RECORDS[0]
 
   return (
@@ -48,7 +48,7 @@ function TodayQuestion() {
     >
       {/* 질문 위 인사 한마디 (TODO: 닉네임은 회원 API에서) */}
       <p className="bob text-[17px] text-mute">
-        <span className="font-medium text-paper">{NICKNAME}님,</span> 오늘도 한 문제만 같이 풀어 볼까요?
+        <span className="font-medium text-paper">{nickname}님,</span> 오늘도 한 문제만 같이 풀어 볼까요?
       </p>
       <OneLineTitle id="today-title" text={today.question} />
 

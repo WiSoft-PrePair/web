@@ -1,9 +1,15 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { type FormEvent, type ReactNode, useState } from 'react'
 import { useNavigate } from 'react-router'
+import { BottomSheet } from '../components/BottomSheet'
+import { OtpInput } from '../components/OtpInput'
+import { Welcome } from '../components/Welcome'
+import { Consents } from '../components/Consents'
+import { useConsents } from '../components/useConsents'
 import { ChoiceCards } from '../components/prefs'
 import { CHANNELS, type Channel, FREQUENCY } from '../components/prefsOptions'
 import { AuthShell, BrandLogo, EyeToggle, bareInput, boxInput, boxWrap, tossButton } from '../components/auth'
+import { ApiError, type Frequency, login, type Notification, register, sendSignupCode, verifySignupCode } from '../lib/api'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 /** 단계 내용 넘김: 앞으로 가면 오른쪽에서 들어와 왼쪽으로, 뒤로 가면 반대 */
@@ -14,7 +20,7 @@ const SLIDE = {
 }
 
 /**
- * 회원가입: 2단계 (1. 계정: 이메일 인증·비밀번호·닉네임 / 2. 질문 설정: 희망 직무·받는 곳·주기) → 완료. 화면만, API 연동은 아직.
+ * 회원가입: 2단계 (1. 계정: 이메일 인증·비밀번호·닉네임 / 2. 질문 설정: 희망 직무·받는 곳·주기) → 가입 뒤 바로 로그인 → 완료.
  * 필드는 member-service 가입 API와 같다:
  *   POST /api/members/email (purpose REGISTER) → POST /api/members/email-verify
  *   → POST /api/members/register { email, password(8+), nickname, job, notification(email|kakao|both), frequency(every|weekly) }
@@ -40,6 +46,10 @@ export default function Signup() {
   // 서버 값으로: 둘 다 고르면 both
   const notification = channels.length === 2 ? 'both' : channels[0]
   const [frequency, setFrequency] = useState<string>()
+  // 서버 요청 중 표시와 오류 문구 (이메일·인증번호 칸 아래, 가입 버튼 아래)
+  const [busy, setBusy] = useState<'send' | 'verify' | 'submit' | null>(null)
+  const [emailError, setEmailError] = useState('')
+  const [submitError, setSubmitError] = useState('')
 
   // 단계 이동 방향(앞으로 1, 뒤로 -1): 내용이 그 방향으로 밀려 나가고 들어온다
   const [dir, setDir] = useState(1)
@@ -50,30 +60,66 @@ export default function Signup() {
 
   const emailValid = /^\S+@\S+\.\S+$/.test(email)
   const accountValid = verify === 'verified' && password.length >= 8 && !!nickname.trim()
+  const consents = useConsents()
   const canSubmit = accountValid && job.trim() && notification && frequency
+  // 이메일을 서버로 보내기 전에(첫 '인증하기') 약관 동의를 바텀시트로 받는다
+  const [consentOpen, setConsentOpen] = useState(false)
 
-  const sendCode = () => {
-    // TODO: POST /api/members/email { email, purpose: 'REGISTER' }
-    setVerify('sent')
-    setCode('')
+  const sendCode = async () => {
+    setBusy('send')
+    setEmailError('')
+    try {
+      await sendSignupCode(email.trim())
+      setVerify('sent')
+      setCode('')
+    } catch (err) {
+      setEmailError(err instanceof ApiError && err.code === 'EMAIL_ALREADY_EXISTS' ? '이미 가입된 이메일이에요. 로그인해 주세요.' : errorText(err, '인증번호를 보내지 못했어요.'))
+    } finally {
+      setBusy(null)
+    }
   }
   // 6자리를 다 입력하면 자동으로 확인한다
-  const onCodeChange = (v: string) => {
+  const onCodeChange = async (v: string) => {
     const digits = v.replace(/\D/g, '').slice(0, 6)
     setCode(digits)
-    // TODO: POST /api/members/email-verify { email, code }
-    if (digits.length === 6) setVerify('verified')
+    setEmailError('')
+    if (digits.length !== 6 || busy) return
+    setBusy('verify')
+    try {
+      await verifySignupCode(email.trim(), digits)
+      setVerify('verified')
+    } catch (err) {
+      setEmailError(err instanceof ApiError && err.code === 'INVALID_VERIFICATION_CODE' ? '인증번호가 맞지 않거나 시간이 지났어요.' : errorText(err, '인증번호를 확인하지 못했어요.'))
+      setCode('')
+    } finally {
+      setBusy(null)
+    }
   }
   const onNext = (e: FormEvent) => {
     e.preventDefault()
     if (accountValid) go(2)
   }
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    if (!canSubmit) return
-    // TODO: POST /api/members/register
-    // 완료 화면: 체크 → 인사 → 설정 요약 → 버튼으로 메인 (자동으로 넘기지 않는다)
-    setStep('done')
+    if (!canSubmit || busy) return
+    setBusy('submit')
+    setSubmitError('')
+    try {
+      await register({ email: email.trim(), password, nickname: nickname.trim(), job: job.trim(), notification: notification as Notification, frequency: frequency as Frequency })
+      await login(email.trim(), password)
+      // 완료 화면: 체크 → 인사 → 설정 요약 → 버튼으로 메인 (자동으로 넘기지 않는다)
+      setStep('done')
+    } catch (err) {
+      // 인증은 5분만 유효하다. 지나면 1단계로 돌려 다시 인증받는다
+      if (err instanceof ApiError && err.status === 401) {
+        setVerify('idle')
+        setCode('')
+        setEmailError('인증 시간이 지났어요. 이메일을 다시 인증해 주세요.')
+        go(1)
+      } else setSubmitError(errorText(err, '가입하지 못했어요.'))
+    } finally {
+      setBusy(null)
+    }
   }
 
   return (
@@ -117,11 +163,11 @@ export default function Signup() {
                   ) : (
                     <button
                       type="button"
-                      disabled={!emailValid}
-                      onClick={sendCode}
+                      disabled={!emailValid || busy === 'send'}
+                      onClick={() => (consents.requiredOk ? sendCode() : setConsentOpen(true))}
                       className="shrink-0 text-sm font-semibold text-paper transition-opacity hover:opacity-70 disabled:cursor-not-allowed disabled:text-dim disabled:hover:opacity-100"
                     >
-                      {verify === 'sent' ? '다시 받기' : '인증하기'}
+                      {busy === 'send' ? '보내는 중…' : verify === 'sent' ? '다시 받기' : '인증하기'}
                     </button>
                   )}
                 </div>
@@ -134,6 +180,11 @@ export default function Signup() {
                   </Field>
                 )}
               </AnimatePresence>
+              {emailError && (
+                <p role="alert" className="-mt-3 px-1 text-[13px] text-[#f04452]">
+                  {emailError}
+                </p>
+              )}
 
               <Field label="비밀번호">
                 <div className={boxWrap}>
@@ -195,10 +246,14 @@ export default function Signup() {
               </Field>
 
               <div className="pt-3">
-                <button type="submit" disabled={!canSubmit} className={tossButton}>
-                  가입하기
+                <button type="submit" disabled={!canSubmit || busy === 'submit'} className={tossButton}>
+                  {busy === 'submit' ? '가입하는 중…' : '가입하기'}
                 </button>
-                <p className="mt-3 text-center text-xs text-dim">가입하면 이용약관과 개인정보 처리방침에 동의하게 됩니다.</p>
+                {submitError && (
+                  <p role="alert" className="mt-3 text-center text-[13px] text-[#f04452]">
+                    {submitError}
+                  </p>
+                )}
               </div>
             </form>
           </motion.div>
@@ -206,64 +261,26 @@ export default function Signup() {
             </AnimatePresence>
           </motion.div>
         ) : (
-          <motion.div key="welcome" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: EASE }} className="text-center">
-            {/* 완료 표시: 동그라미가 그려진 뒤 체크가 들어온다 */}
-            <svg viewBox="0 0 56 56" className="mx-auto h-14 w-14 text-toss" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <motion.circle cx="28" cy="28" r="25" strokeWidth="3" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.5, ease: EASE }} />
-              <motion.path d="M18 28.5l7 7 13-14" strokeWidth="3.5" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.35, delay: 0.45, ease: EASE }} />
-            </svg>
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.7, ease: EASE }}>
-              <h1 className="mt-7 text-[26px] font-semibold tracking-tight">{nickname}님, 반가워요</h1>
-              {/* 방금 고른 설정을 한 줄로 확인 */}
-              <p className="mt-3 text-[15px] leading-relaxed text-soft">
-                {welcomeLine(frequency, notification)[0]},
-                <br />
-                {welcomeLine(frequency, notification)[1]}
-              </p>
-              <button type="button" onClick={() => navigate('/app')} className={`mt-10 ${tossButton}`}>
-                오늘의 질문 보러 가기
-              </button>
-            </motion.div>
-          </motion.div>
+          <Welcome key="welcome" nickname={nickname} job={job} frequency={frequency} notification={notification} onStart={() => navigate('/app', { replace: true })} />
         )}
       </AnimatePresence>
       </div>
 
+      <BottomSheet open={consentOpen} title="약관에 동의해 주세요" desc="인증번호를 보내기 전에 확인해 주세요." onClose={() => setConsentOpen(false)}>
+        <Consents checked={consents.checked} setChecked={consents.setChecked} />
+        <button
+          type="button"
+          disabled={!consents.requiredOk}
+          onClick={() => {
+            setConsentOpen(false)
+            sendCode()
+          }}
+          className={`mt-5 ${tossButton}`}
+        >
+          동의하고 인증번호 받기
+        </button>
+      </BottomSheet>
     </AuthShell>
-  )
-}
-
-/** 인증번호 6칸: 보이지 않는 입력칸 하나 위에 둥근 사각 칸 6개를 그린다. 6자리가 차면 자동 확인 */
-function OtpInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [focused, setFocused] = useState(true)
-  return (
-    <label className="relative grid grid-cols-6 gap-2">
-      <input
-        aria-label="인증번호 6자리"
-        inputMode="numeric"
-        autoComplete="one-time-code"
-        maxLength={6}
-        autoFocus
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        className="absolute inset-0 h-full w-full cursor-text opacity-0"
-      />
-      {Array.from({ length: 6 }, (_, i) => {
-        const current = focused && i === Math.min(value.length, 5)
-        return (
-          <span
-            key={i}
-            className={`grid h-[54px] place-items-center rounded-2xl border bg-card font-display text-xl font-semibold text-paper transition-colors ${
-              current ? 'border-dim' : i < value.length ? 'border-soft/40' : 'border-line'
-            }`}
-          >
-            {value[i] ?? ''}
-          </span>
-        )
-      })}
-    </label>
   )
 }
 
@@ -347,20 +364,15 @@ function Field({ label, hint, hintTone, appear = false, children }: { label: str
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -6, transition: { duration: 0.2 } }}
     >
-      <span className="block text-[13px] font-medium text-soft">{label}</span>
+      <span className="block pl-1 text-[13px] font-medium text-soft">{label}</span>
       <div className="mt-2">{children}</div>
-      {hint && <span className={`mt-2.5 block text-xs ${hintTone === 'lime' ? 'text-paper' : 'text-mute'}`}>{hint}</span>}
+      {hint && <span className={`mt-2.5 block pl-1 text-xs ${hintTone === 'lime' ? 'text-paper' : 'text-mute'}`}>{hint}</span>}
     </motion.div>
   )
 }
 
 
-/** 완료 화면 설정 요약 두 줄: ["매일 오전 8시", "이메일로 질문을 보내 드릴게요."] */
-function welcomeLine(frequency?: string, notification?: string): [string, string] {
-  const when = frequency === 'weekly' ? '매주 월요일 오전 8시' : '매일 오전 8시'
-  const where = notification === 'both' ? '이메일과 카카오톡으로' : notification === 'kakao' ? '카카오톡으로' : '이메일로'
-  return [when, `${where} 질문을 보내 드릴게요.`]
-}
+const errorText = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback)
 
 function Check({ className = 'h-4 w-4' }: { className?: string }) {
   return (

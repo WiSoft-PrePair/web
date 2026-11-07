@@ -59,9 +59,14 @@ export function BrandLogo({ size = 20, className = '', nudge = true }: { size?: 
   )
 }
 
-export function KakaoButton({ children }: { children: ReactNode }) {
+export function KakaoButton({ children, onClick, disabled }: { children: ReactNode; onClick?: () => void; disabled?: boolean }) {
   return (
-    <button type="button" className="flex h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[#FEE500] text-[16px] font-semibold text-[#191919] transition-opacity hover:opacity-90">
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[#FEE500] text-[16px] font-semibold text-[#191919] transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+    >
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="#191919" aria-hidden>
         <path d="M12 3C6.48 3 2 6.58 2 11c0 2.85 1.86 5.35 4.66 6.77l-.95 3.5c-.08.3.26.54.52.37l4.17-2.77c.53.07 1.06.13 1.6.13 5.52 0 10-3.58 10-8S17.52 3 12 3Z" />
       </svg>

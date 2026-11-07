@@ -1,28 +1,33 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { AppShell, PageTitle } from '../components/AppShell'
+import { BottomSheet } from '../components/BottomSheet'
 import { tossButton } from '../components/auth'
 import { ChoiceCards } from '../components/prefs'
 import { FREQUENCY } from '../components/prefsOptions'
+import { ApiError, changePassword, fetchMe, type Frequency, type Member, updateProfile, useMember } from '../lib/api'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
-type Sheet = 'nickname' | 'job' | 'frequency' | null
+type Sheet = 'nickname' | 'job' | 'frequency' | 'password' | null
 
 /**
- * 마이페이지 (화면만, 토스식 목록): 묶음별 흰 카드(내 정보: 이메일(보기만)·닉네임·희망 직무 · 질문 알림). 로그아웃·회원 탈퇴는 헤더 프로필 메뉴로 옮김. 넓은 화면은 90% 크기.
+ * 마이페이지 (토스식 목록): 묶음별 흰 카드(내 정보: 이메일(보기만)·닉네임·희망 직무 · 질문 알림). 로그아웃·회원 탈퇴는 헤더 프로필 메뉴로 옮김. 넓은 화면은 90% 크기.
  * 행 = 이름 | 현재 값 + 화살표, 누르면 편집 창(모바일은 아래에서, 넓은 화면은 가운데).
- * 알림 채널은 스위치로 바로 적용. 저장 버튼 없이 바뀔 때마다 저장(목업은 토스트만).
- * TODO: GET /api/auth/me 로 채우고, 바뀔 때마다 member-service 수정 API 호출
+ * 알림 채널은 스위치로 바로 적용. 저장 버튼 없이 바뀔 때마다 PATCH /api/members 로 저장.
  */
 export default function MyPage() {
-  const [nickname, setNickname] = useState('우민')
-  const accountEmail = 'woomin@example.com' // 목업
-  const [job, setJob] = useState('백엔드 개발자 (Spring, 대용량 트래픽 경험 위주)')
-  const [email, setEmail] = useState(true)
-  const [kakao, setKakao] = useState(true)
-  const [frequency, setFrequency] = useState<string>('every')
+  // 화면 값은 로그인 세션의 내 정보에서 바로 읽는다. 들어올 때 서버의 최신 값으로 한 번 맞추고, 바꾸면 서버에 저장 → 세션 갱신 → 다시 그림
+  const member = useMember()
+  useEffect(() => {
+    fetchMe().catch(() => {})
+  }, [])
+  const nickname = member?.nickname ?? ''
+  const accountEmail = member?.email ?? ''
+  const job = member?.job ?? ''
+  const email = member?.notification !== 'kakao'
+  const kakao = member?.notification === 'kakao' || member?.notification === 'both'
+  const frequency = member?.frequency ?? 'every'
   const [sheet, setSheet] = useState<Sheet>(null)
   const [toast, setToast] = useState<string | null>(null)
   const toastTimer = useRef<number>(undefined)
@@ -33,14 +38,21 @@ export default function MyPage() {
     toastTimer.current = window.setTimeout(() => setToast(null), 1600)
   }
 
+  const save = (patch: Parameters<typeof updateProfile>[0]) =>
+    updateProfile(patch).then(
+      () => notify('저장했어요'),
+      () => notify('저장하지 못했어요. 다시 시도해 주세요'),
+    )
+
   // 알림 채널은 하나는 켜져 있어야 함 (서버 값: email | kakao | both)
   const toggleChannel = (which: 'email' | 'kakao') => {
     const on = which === 'email' ? email : kakao
     const other = which === 'email' ? kakao : email
     if (on && !other) return notify('알림 채널은 하나 이상 켜 두어야 해요')
-    if (which === 'email') setEmail(!on)
-    else setKakao(!on)
-    notify('저장했어요')
+    const nextEmail = which === 'email' ? !on : email
+    const nextKakao = which === 'kakao' ? !on : kakao
+    const notification: Member['notification'] = nextEmail && nextKakao ? 'both' : nextKakao ? 'kakao' : 'email'
+    save({ notification })
   }
 
   const freq = FREQUENCY.find((f) => f.value === frequency)!
@@ -57,6 +69,8 @@ export default function MyPage() {
           <InfoRow label="이메일" value={accountEmail} />
           <ValueRow label="닉네임" value={nickname} onClick={() => setSheet('nickname')} />
           <ValueRow label="희망 직무" value={job} onClick={() => setSheet('job')} />
+          {/* 이메일로 가입한 사람만: 카카오 가입자는 비밀번호를 정한 적이 없다 */}
+          {member?.provider === 'email' && <ValueRow label="비밀번호 변경" value="" onClick={() => setSheet('password')} />}
         </Section>
 
         <Section title="질문 알림">
@@ -74,9 +88,8 @@ export default function MyPage() {
           placeholder="어떻게 불러 드릴까요?"
           onCancel={() => setSheet(null)}
           onDone={(v) => {
-            setNickname(v)
             setSheet(null)
-            notify('저장했어요')
+            save({ nickname: v })
           }}
         />
       </BottomSheet>
@@ -88,9 +101,17 @@ export default function MyPage() {
           initial={job}
           onCancel={() => setSheet(null)}
           onDone={(v) => {
-            setJob(v)
             setSheet(null)
-            notify('저장했어요')
+            save({ job: v })
+          }}
+        />
+      </BottomSheet>
+      <BottomSheet open={sheet === 'password'} title="비밀번호 변경" desc="지금 비밀번호를 확인한 뒤 바꿔 드려요." onClose={() => setSheet(null)}>
+        <PasswordEdit
+          onCancel={() => setSheet(null)}
+          onDone={() => {
+            setSheet(null)
+            notify('비밀번호를 바꿨어요')
           }}
         />
       </BottomSheet>
@@ -100,9 +121,8 @@ export default function MyPage() {
           options={FREQUENCY}
           isOn={(v) => v === frequency}
           onPick={(v) => {
-            setFrequency(v)
             setSheet(null)
-            notify('저장했어요')
+            if (v !== frequency) save({ frequency: v as Frequency })
           }}
         />
       </BottomSheet>
@@ -178,52 +198,6 @@ function SwitchRow({ label, on, onToggle }: { label: string; on: boolean; onTogg
 
 /* ───────── 편집 창 ───────── */
 
-/** 모바일은 아래에서 올라오는 시트(손잡이 막대), 넓은 화면은 가운데 창. 제목 + 한 줄 설명 + 오른쪽 위 닫기 */
-function BottomSheet({ open, title, desc, onClose, children }: { open: boolean; title: string; desc?: string; onClose: () => void; children: ReactNode }) {
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
-
-  // 본문 판(.app-panel) 안에 두면 헤더 아래에 깔려서, body에 바로 그린다 (색 토큰을 위해 data-theme만 붙임)
-  return createPortal(
-    <AnimatePresence>
-      {open && (
-        <motion.div data-theme="light" className="fixed inset-0 z-50 flex items-end justify-center md:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-          <button type="button" aria-label="닫기" onClick={onClose} className="absolute inset-0 bg-black/35" />
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            aria-label={title}
-            initial={{ y: 32, opacity: 0, scale: 0.98 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: 32, opacity: 0, scale: 0.98 }}
-            transition={{ duration: 0.28, ease: EASE }}
-            className="relative w-full max-w-[420px] rounded-t-[28px] bg-card px-6 pt-3 pb-7 shadow-[0_24px_64px_-24px_rgba(16,24,40,0.4)] md:rounded-[28px] md:pt-6 md:pb-6"
-          >
-            <span aria-hidden className="mx-auto mb-4 block h-1 w-10 rounded-full bg-tint/15 md:hidden" />
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-[19px] font-semibold tracking-tight text-paper">{title}</h2>
-                {desc && <p className="mt-1 text-[14px] text-mute">{desc}</p>}
-              </div>
-              <button type="button" onClick={onClose} aria-label="닫기" className="-mt-1 -mr-2 grid h-9 w-9 shrink-0 place-items-center rounded-full text-mute transition-colors hover:bg-tint/[0.06] hover:text-paper">
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-                  <path d="M6 6l12 12M18 6 6 18" />
-                </svg>
-              </button>
-            </div>
-            <div className="mt-5">{children}</div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>,
-    document.body,
-  )
-}
-
 /** 글 고치기: 회색 칸 + 글자 수, 아래 취소 · 저장 (바뀐 게 없거나 비면 저장 막음) */
 function TextEdit({
   initial,
@@ -264,6 +238,50 @@ function TextEdit({
         </button>
         <button type="submit" disabled={!canSave} className={tossButton}>
           저장
+        </button>
+      </div>
+    </form>
+  )
+}
+
+/** 비밀번호 변경: 지금 비밀번호 · 새 비밀번호(8자 이상), 아래 취소 · 변경. 지금 비밀번호가 틀리면 칸 아래에 알려 준다 */
+function PasswordEdit({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const canSave = current.length >= 8 && next.length >= 8 && current !== next && !busy
+  const submit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!canSave) return
+    setBusy(true)
+    setError('')
+    try {
+      await changePassword(current, next)
+      onDone()
+    } catch (err) {
+      setError(err instanceof ApiError && err.code === 'INVALID_PASSWORD' ? '지금 비밀번호가 맞지 않아요.' : err instanceof Error ? err.message : '비밀번호를 바꾸지 못했어요.')
+      setBusy(false)
+    }
+  }
+  const field = 'w-full rounded-2xl border border-transparent bg-tint/[0.04] px-4 py-3.5 text-[16px] leading-6 text-paper outline-none transition-colors placeholder:text-dim focus:border-dim focus:bg-card'
+  return (
+    <form onSubmit={submit} className="space-y-2">
+      <input autoFocus type="password" autoComplete="current-password" aria-label="지금 비밀번호" placeholder="지금 비밀번호" value={current} onChange={(e) => setCurrent(e.target.value)} className={field} />
+      <input type="password" autoComplete="new-password" aria-label="새 비밀번호" placeholder="새 비밀번호 (8자 이상)" value={next} onChange={(e) => setNext(e.target.value)} className={field} />
+      {error ? (
+        <p role="alert" className="px-1 pt-1 text-[13px] text-[#f04452]">
+          {error}
+        </p>
+      ) : (
+        current && next && current === next && <p className="px-1 pt-1 text-[13px] text-mute">지금과 다른 비밀번호로 정해 주세요.</p>
+      )}
+      <div className="grid grid-cols-[1fr_2fr] gap-2 pt-4">
+        <button type="button" onClick={onCancel} className="h-[54px] rounded-2xl bg-tint/[0.05] text-[16px] font-semibold text-soft transition-colors hover:bg-tint/[0.08]">
+          취소
+        </button>
+        <button type="submit" disabled={!canSave} className={tossButton}>
+          {busy ? '바꾸는 중…' : '변경'}
         </button>
       </div>
     </form>
