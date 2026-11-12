@@ -6,10 +6,11 @@ import { OtpInput } from '../components/OtpInput'
 import { Welcome } from '../components/Welcome'
 import { Consents } from '../components/Consents'
 import { useConsents } from '../components/useConsents'
-import { ChoiceCards } from '../components/prefs'
-import { CHANNELS, type Channel, FREQUENCY } from '../components/prefsOptions'
-import { AuthShell, BrandLogo, EyeToggle, bareInput, boxInput, boxWrap, tossButton } from '../components/auth'
-import { ApiError, type Frequency, login, type Notification, register, sendSignupCode, verifySignupCode } from '../lib/api'
+import { Stepper } from '../components/Stepper'
+import { AuthShell, EyeToggle, bareInput, boxInput, boxWrap, tossButton } from '../components/auth'
+import { EmailSuggestMenu, EmailTypoHint } from '../components/EmailSuggest'
+import { useEmailSuggest } from '../components/useEmailSuggest'
+import { ApiError, login, register, sendSignupCode, verifySignupCode } from '../lib/api'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 /** 단계 내용 넘김: 앞으로 가면 오른쪽에서 들어와 왼쪽으로, 뒤로 가면 반대 */
@@ -20,11 +21,11 @@ const SLIDE = {
 }
 
 /**
- * 회원가입: 2단계 (1. 계정: 이메일 인증·비밀번호·닉네임 / 2. 질문 설정: 희망 직무·받는 곳·주기) → 가입 뒤 바로 로그인 → 완료.
+ * 회원가입: 2단계 (1. 계정: 이메일 인증·비밀번호·닉네임 / 2. 직무 설정: 직무) → 가입 뒤 바로 로그인 → 완료.
  * 필드는 member-service 가입 API와 같다:
  *   POST /api/members/email (purpose REGISTER) → POST /api/members/email-verify
- *   → POST /api/members/register { email, password(8+), nickname, job, notification(email|kakao|both), frequency(every|weekly) }
- * 카카오는 로그인 화면에만 둔다. 신규 카카오 사용자는 OAuth 콜백 후 '질문 설정' 값만 추가로 받는다 (POST /api/auth/kakao/register).
+ *   → POST /api/members/register { email, password(8+), nickname, job }
+ * 카카오는 로그인 화면에만 둔다. 신규 카카오 사용자는 OAuth 콜백 후 '직무 설정' 값만 추가로 받는다 (POST /api/auth/kakao/register).
  */
 
 
@@ -32,7 +33,7 @@ type Verify = 'idle' | 'sent' | 'verified'
 
 export default function Signup() {
   const navigate = useNavigate()
-  // 1: 계정 → 2: 질문 설정 → 완료(done)
+  // 1: 계정 생성 → 2: 직무 설정 → 완료(done)
   const [step, setStep] = useState<1 | 2 | 'done'>(1)
   const [showPassword, setShowPassword] = useState(false)
 
@@ -42,10 +43,6 @@ export default function Signup() {
   const [password, setPassword] = useState('')
   const [nickname, setNickname] = useState('')
   const [job, setJob] = useState('')
-  const [channels, setChannels] = useState<Channel[]>([])
-  // 서버 값으로: 둘 다 고르면 both
-  const notification = channels.length === 2 ? 'both' : channels[0]
-  const [frequency, setFrequency] = useState<string>()
   // 서버 요청 중 표시와 오류 문구 (이메일·인증번호 칸 아래, 가입 버튼 아래)
   const [busy, setBusy] = useState<'send' | 'verify' | 'submit' | null>(null)
   const [emailError, setEmailError] = useState('')
@@ -59,9 +56,15 @@ export default function Signup() {
   }
 
   const emailValid = /^\S+@\S+\.\S+$/.test(email)
+  // 자동완성·오타 제안으로 주소를 고쳤으면 이전 오류 문구는 지운다
+  const pickEmail = (v: string) => {
+    setEmail(v)
+    setEmailError('')
+  }
+  const suggest = useEmailSuggest(email, pickEmail, verify === 'idle')
   const accountValid = verify === 'verified' && password.length >= 8 && !!nickname.trim()
   const consents = useConsents()
-  const canSubmit = accountValid && job.trim() && notification && frequency
+  const canSubmit = accountValid && job.trim()
   // 이메일을 서버로 보내기 전에(첫 '인증하기') 약관 동의를 바텀시트로 받는다
   const [consentOpen, setConsentOpen] = useState(false)
 
@@ -105,7 +108,7 @@ export default function Signup() {
     setBusy('submit')
     setSubmitError('')
     try {
-      await register({ email: email.trim(), password, nickname: nickname.trim(), job: job.trim(), notification: notification as Notification, frequency: frequency as Frequency })
+      await register({ email: email.trim(), password, nickname: nickname.trim(), job: job.trim() })
       await login(email.trim(), password)
       // 완료 화면: 체크 → 인사 → 설정 요약 → 버튼으로 메인 (자동으로 넘기지 않는다)
       setStep('done')
@@ -143,11 +146,13 @@ export default function Signup() {
 
             <form onSubmit={onNext} className="mt-10 space-y-6">
               <Field label="이메일">
+                <div className="relative">
                 <div className={boxWrap}>
                   <input
                     aria-label="이메일"
                     type="email"
                     autoComplete="email"
+                    {...suggest.inputProps}
                     value={email}
                     readOnly={verify === 'verified'}
                     onChange={(e) => {
@@ -171,6 +176,9 @@ export default function Signup() {
                     </button>
                   )}
                 </div>
+                {suggest.open && <EmailSuggestMenu items={suggest.items} active={suggest.active} onPick={suggest.pick} onHover={suggest.setActive} />}
+                </div>
+                {verify === 'idle' && <EmailTypoHint email={email} onPick={pickEmail} />}
               </Field>
 
               <AnimatePresence initial={false}>
@@ -199,6 +207,11 @@ export default function Signup() {
                   />
                   <EyeToggle shown={showPassword} onToggle={() => setShowPassword((v) => !v)} />
                 </div>
+                {password && (
+                  <p className={`mt-2.5 flex items-center gap-1 pl-1 text-xs transition-colors ${password.length >= 8 ? 'text-toss' : 'text-mute'}`}>
+                    <Check className="h-3.5 w-3.5" /> 8자 이상
+                  </p>
+                )}
               </Field>
 
               <Field label="닉네임">
@@ -214,14 +227,14 @@ export default function Signup() {
           </motion.div>
               ) : (
           <motion.div key="settings" custom={dir} variants={SLIDE} initial="enter" animate="center" exit="exit" transition={{ duration: 0.28, ease: EASE }}>
-            <h1 className="sr-only">회원가입 · 질문 설정</h1>
+            <h1 className="sr-only">회원가입 · 직무 설정</h1>
 
             <form onSubmit={onSubmit} className="mt-10 space-y-6">
-              <Field label="희망 직무" hint="자유롭게 적을수록 질문이 더 잘 맞춰져요.">
+              <Field label="직무" hint="적어 주신 직무에 맞는 질문을 매일 하나씩 드려요.">
                 <textarea
-                  aria-label="희망 직무"
+                  aria-label="직무"
                   rows={1}
-                  placeholder="예: 대용량 트래픽을 다루는 백엔드 개발자"
+                  placeholder="예: 백엔드 개발자, 마케터"
                   value={job}
                   onChange={(e) => {
                     setJob(e.target.value)
@@ -230,19 +243,6 @@ export default function Signup() {
                   }}
                   className={`${boxInput} block h-auto min-h-[54px] resize-none overflow-hidden py-[14px] leading-[24px]`}
                 />
-              </Field>
-
-              <Field label="알림 채널" hint="둘 다 선택할 수 있어요.">
-                <ChoiceCards
-                  multiple
-                  options={CHANNELS}
-                  isOn={(v) => channels.includes(v as Channel)}
-                  onPick={(v) => setChannels((cs) => (cs.includes(v as Channel) ? cs.filter((c) => c !== v) : [...cs, v as Channel]))}
-                />
-              </Field>
-
-              <Field label="알림 주기">
-                <ChoiceCards options={FREQUENCY} isOn={(v) => frequency === v} onPick={setFrequency} />
               </Field>
 
               <div className="pt-3">
@@ -261,7 +261,7 @@ export default function Signup() {
             </AnimatePresence>
           </motion.div>
         ) : (
-          <Welcome key="welcome" nickname={nickname} job={job} frequency={frequency} notification={notification} onStart={() => navigate('/app', { replace: true })} />
+          <Welcome key="welcome" nickname={nickname} job={job} onStart={() => navigate('/app', { replace: true })} />
         )}
       </AnimatePresence>
       </div>
@@ -281,75 +281,6 @@ export default function Signup() {
         </button>
       </BottomSheet>
     </AuthShell>
-  )
-}
-
-/** 단계 표시: 폼 폭만큼의 얇은 막대 두 칸. 지금 단계까지 흰색으로 채워진다. 막대를 눌러 이동(2단계는 계정 정보를 다 채운 뒤에만) */
-function Stepper({ step, canGoNext, onGo, onBack }: { step: 1 | 2; canGoNext: boolean; onGo: (s: 1 | 2) => void; onBack: () => void }) {
-  const steps = [
-    { n: 1 as const, label: '1단계: 계정' },
-    { n: 2 as const, label: '2단계: 질문 설정' },
-  ]
-  return (
-    <div>
-      {/* 맨 위 줄: 왼쪽 이전, 가운데 작은 로고 (작성 중 실수로 나가지 않게 로고엔 링크를 걸지 않는다) */}
-      <div className="relative mb-4 flex h-9 items-center justify-center">
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label="이전"
-          className="absolute left-0 -ml-2 grid h-9 w-9 place-items-center rounded-full text-soft transition-colors hover:bg-tint/[0.06] hover:text-paper"
-        >
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M15 5l-7 7 7 7" />
-          </svg>
-        </button>
-        <BrandLogo size={17} />
-      </div>
-      <div className="mb-1 flex items-baseline justify-between">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.span
-            key={step}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.25, ease: EASE }}
-            className="text-[15px] font-medium text-paper"
-          >
-            {step === 1 ? '계정 만들기' : '질문 설정'}
-          </motion.span>
-        </AnimatePresence>
-        <span className="text-sm text-mute">
-          <span className="text-paper">{step}</span> / 2
-        </span>
-      </div>
-    <nav aria-label="가입 단계" className="flex gap-2">
-      {steps.map(({ n, label }) => {
-        const filled = step >= n
-        const enabled = n === 1 || canGoNext
-        return (
-          <button
-            key={n}
-            type="button"
-            aria-label={label}
-            aria-current={step === n ? 'step' : undefined}
-            disabled={!enabled || step === n}
-            onClick={() => onGo(n)}
-            className="group flex-1 py-2 disabled:cursor-default"
-          >
-            <span className="relative block h-[3px] overflow-hidden rounded-full bg-tint/[0.08]">
-              <motion.span
-                className="absolute inset-0 origin-left rounded-full bg-toss"
-                initial={false}
-                animate={{ scaleX: filled ? 1 : 0 }}
-                transition={{ duration: 0.45, ease: EASE }}
-              />
-            </span>
-          </button>
-        )
-      })}
-    </nav>
-    </div>
   )
 }
 

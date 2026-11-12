@@ -59,6 +59,15 @@ export function BrandLogo({ size = 20, className = '', nudge = true }: { size?: 
   )
 }
 
+/** 카카오 말풍선 마크 (검정) */
+export function KakaoMark({ className }: { className: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="#191919" aria-hidden>
+      <path d="M12 3C6.48 3 2 6.58 2 11c0 2.85 1.86 5.35 4.66 6.77l-.95 3.5c-.08.3.26.54.52.37l4.17-2.77c.53.07 1.06.13 1.6.13 5.52 0 10-3.58 10-8S17.52 3 12 3Z" />
+    </svg>
+  )
+}
+
 export function KakaoButton({ children, onClick, disabled }: { children: ReactNode; onClick?: () => void; disabled?: boolean }) {
   return (
     <button
@@ -67,18 +76,16 @@ export function KakaoButton({ children, onClick, disabled }: { children: ReactNo
       disabled={disabled}
       className="flex h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[#FEE500] text-[16px] font-semibold text-[#191919] transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
     >
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="#191919" aria-hidden>
-        <path d="M12 3C6.48 3 2 6.58 2 11c0 2.85 1.86 5.35 4.66 6.77l-.95 3.5c-.08.3.26.54.52.37l4.17-2.77c.53.07 1.06.13 1.6.13 5.52 0 10-3.58 10-8S17.52 3 12 3Z" />
-      </svg>
+      <KakaoMark className="h-5 w-5" />
       {children}
     </button>
   )
 }
 
 /** 밑줄형 입력칸 (로그인·회원가입 공통). bareInput은 밑줄을 바깥 줄이 그릴 때 */
-export const bareInput = 'w-full bg-transparent px-0 py-2.5 text-[16px] text-paper outline-none placeholder:text-dim'
+export const bareInput = 'w-full bg-transparent px-0 py-2.5 text-[16px] text-paper outline-none placeholder:text-[15px] placeholder:text-dim'
 /** 둥근 칸 입력 (로그인) */
-export const boxInput = 'w-full h-[54px] rounded-2xl border border-line bg-card px-5 text-[16px] text-paper outline-none transition-colors placeholder:text-mute focus:border-dim'
+export const boxInput = 'w-full h-[54px] rounded-2xl border border-line bg-card px-5 text-[16px] text-paper outline-none transition-colors placeholder:text-[15px] placeholder:text-dim focus:border-dim'
 /** 둥근 칸 안에 입력 + 오른쪽 버튼(인증하기·눈 아이콘)을 함께 넣을 때의 바깥 칸 */
 export const boxWrap = 'flex h-[54px] items-center gap-3 rounded-2xl border border-line bg-card px-5 transition-colors focus-within:border-dim'
 /** 로그인·회원가입 주요 버튼 (토스 파랑) */

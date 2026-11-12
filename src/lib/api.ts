@@ -13,8 +13,6 @@ export type Member = {
   email?: string
   nickname?: string
   job?: string
-  notification?: Notification
-  frequency?: Frequency
   provider?: 'email' | 'kakao'
 }
 type Session = { accessToken: string; refreshToken: string; member: Member }
@@ -123,13 +121,11 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
 
 // ── 회원 · 인증 ──
 type Tokens = { accessToken: string; refreshToken: string }
-export type Notification = 'email' | 'kakao' | 'both'
-export type Frequency = 'every' | 'weekly'
 
 export async function login(email: string, password: string) {
   const r = await api<Tokens & { member_info: Member }>('/api/auth/login', { method: 'POST', body: { email, password } })
-  const { memberId, nickname, job, notification, frequency } = r.member_info
-  session.set({ accessToken: r.accessToken, refreshToken: r.refreshToken, member: { memberId, email, nickname, job, notification, frequency, provider: 'email' } })
+  const { memberId, nickname, job } = r.member_info
+  session.set({ accessToken: r.accessToken, refreshToken: r.refreshToken, member: { memberId, email, nickname, job, provider: 'email' } })
 }
 
 export async function logout() {
@@ -147,8 +143,8 @@ export async function fetchMe() {
   return me
 }
 
-/** 마이페이지에서 바꾼 값 저장 (닉네임 · 직무 · 알림 채널 · 주기 중 바뀐 것만). 성공하면 세션도 바로 맞춘다 */
-export async function updateProfile(patch: Partial<Pick<Member, 'nickname' | 'job' | 'notification' | 'frequency'>>) {
+/** 마이페이지에서 바꾼 값 저장 (닉네임 · 직무 중 바뀐 것만). 성공하면 세션도 바로 맞춘다 */
+export async function updateProfile(patch: Partial<Pick<Member, 'nickname' | 'job'>>) {
   await api('/api/members', { method: 'PATCH', body: patch, auth: true })
   session.updateMember(patch)
 }
@@ -162,7 +158,7 @@ export const changePassword = (currentPassword: string, newPassword: string) => 
 
 export const sendSignupCode = (email: string) => api('/api/members/email', { method: 'POST', body: { email, purpose: 'REGISTER' } })
 export const verifySignupCode = (email: string, code: string) => api('/api/members/email-verify', { method: 'POST', body: { email, code } })
-export const register = (body: { email: string; password: string; nickname: string; job: string; notification: Notification; frequency: Frequency }) =>
+export const register = (body: { email: string; password: string; nickname: string; job: string }) =>
   api<{ id: string }>('/api/members/register', { method: 'POST', body })
 
 // ── 카카오 ──
@@ -197,11 +193,11 @@ export async function kakaoCallback(code: string): Promise<KakaoNew | null> {
   return null
 }
 
-export async function kakaoRegister(body: { registrationToken: string; job: string; notification: Notification; frequency: Frequency }, prefilled: { email: string; nickname: string }) {
+export async function kakaoRegister(body: { registrationToken: string; job: string }, prefilled: { email: string; nickname: string }) {
   const r = await api<Tokens & { memberId: string; nickname?: string }>('/api/auth/kakao/register', { method: 'POST', body })
   session.set({
     accessToken: r.accessToken,
     refreshToken: r.refreshToken,
-    member: { memberId: r.memberId, email: prefilled.email, nickname: r.nickname ?? prefilled.nickname, job: body.job, notification: body.notification, frequency: body.frequency, provider: 'kakao' },
+    member: { memberId: r.memberId, email: prefilled.email, nickname: r.nickname ?? prefilled.nickname, job: body.job, provider: 'kakao' },
   })
 }

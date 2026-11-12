@@ -5,13 +5,10 @@ import { tossButton } from './auth'
 const EASE = [0.22, 1, 0.36, 1] as const
 
 /** 가입 완료: 로고 마크가 통통 튀어 들어오고 작은 물방울들이 퍼진다 → 인사 → 내 설정 요약 카드 → 시작 버튼 */
-export function Welcome({ nickname, job, frequency, notification, onStart }: { nickname: string; job: string; frequency?: string; notification?: string; onStart: () => void }) {
-  const when = frequency === 'weekly' ? '매주 월요일 오전 8시' : '매일 오전 8시'
-  const where = notification === 'both' ? '이메일 · 카카오톡' : notification === 'kakao' ? '카카오톡' : '이메일'
+export function Welcome({ nickname, job, onStart }: { nickname: string; job: string; onStart: () => void }) {
   const rows = [
-    { label: '질문 받는 시간', value: when },
-    { label: '받는 곳', value: where },
-    { label: '희망 직무', value: job.trim() },
+    { label: '질문 받는 시간', value: '매일 오전 8시' },
+    { label: '직무', value: job.trim() },
   ]
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="text-center">

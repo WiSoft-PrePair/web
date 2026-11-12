@@ -2,7 +2,9 @@ import { motion } from 'motion/react'
 import { type FormEvent, type ReactNode, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { AuthShell, BrandLogo, EyeToggle, bareInput, boxWrap, tossButton } from '../components/auth'
+import { EmailSuggestMenu, EmailTypoHint } from '../components/EmailSuggest'
 import { OtpInput } from '../components/OtpInput'
+import { useEmailSuggest } from '../components/useEmailSuggest'
 import { ApiError, login, resetPassword, sendResetCode } from '../lib/api'
 
 const EASE = [0.22, 1, 0.36, 1] as const
@@ -22,6 +24,12 @@ export default function ResetPassword() {
   const [error, setError] = useState('')
 
   const emailValid = /^\S+@\S+\.\S+$/.test(email)
+  // 회원가입과 같은 이메일 도움말: '@' 뒤 자동완성, 도메인 오타 제안 (인증번호를 보낸 뒤에는 닫는다)
+  const pickEmail = (v: string) => {
+    setEmail(v)
+    setError('')
+  }
+  const suggest = useEmailSuggest(email, pickEmail, !sent)
   const canSubmit = sent && code.length === 6 && password.length >= 8
 
   const sendCode = async () => {
@@ -80,11 +88,13 @@ export default function ResetPassword() {
 
           <form onSubmit={onSubmit} className="mt-10 space-y-6">
             <Field label="이메일">
+              <div className="relative">
               <div className={boxWrap}>
                 <input
                   aria-label="이메일"
                   type="email"
                   autoComplete="email"
+                  {...suggest.inputProps}
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value)
@@ -102,6 +112,9 @@ export default function ResetPassword() {
                   {busy === 'send' ? '보내는 중…' : sent ? '다시 받기' : '인증하기'}
                 </button>
               </div>
+              {suggest.open && <EmailSuggestMenu items={suggest.items} active={suggest.active} onPick={suggest.pick} onHover={suggest.setActive} />}
+              </div>
+              {!sent && <EmailTypoHint email={email} onPick={pickEmail} />}
             </Field>
 
             {sent && (

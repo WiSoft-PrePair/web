@@ -99,8 +99,16 @@ export default function InterviewList() {
 
           {matched.length > items.length && (
             <div className="mt-8 flex justify-center">
-              <button type="button" onClick={() => goPage(page + 1)} className="rounded-full border border-line px-5 py-2 text-[13px] text-soft transition-colors hover:border-mute hover:text-paper">
+              {/* 테두리 없이 글자 + 아래 화살표: 올리면 글자가 진해지고 화살표가 살짝 내려간다 */}
+              <button
+                type="button"
+                onClick={() => goPage(page + 1)}
+                className="group flex items-center gap-1 rounded-full px-3 py-2 text-[13px] font-medium text-mute outline-none transition-colors hover:text-paper focus-visible:ring-2 focus-visible:ring-toss/40"
+              >
                 더 보기
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-y-0.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
               </button>
             </div>
           )}

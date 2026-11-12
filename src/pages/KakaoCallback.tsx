@@ -1,21 +1,20 @@
 import { motion } from 'motion/react'
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
-import { AuthShell, BrandLogo, boxInput, tossButton } from '../components/auth'
+import { AuthShell, BrandLogo, KakaoMark, bareInput, boxInput, boxWrap, tossButton } from '../components/auth'
 import { BottomSheet } from '../components/BottomSheet'
 import { Consents } from '../components/Consents'
 import { useConsents } from '../components/useConsents'
+import { Stepper } from '../components/Stepper'
 import { Welcome } from '../components/Welcome'
-import { ChoiceCards } from '../components/prefs'
-import { CHANNELS, type Channel, FREQUENCY } from '../components/prefsOptions'
-import { type Frequency, type Notification, kakaoCallback, kakaoRegister, peekKakaoState, takeKakaoState } from '../lib/api'
+import { kakaoCallback, kakaoRegister, peekKakaoState, takeKakaoState } from '../lib/api'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 type NewMember = NonNullable<Awaited<ReturnType<typeof kakaoCallback>>>
 
 /**
  * 카카오 로그인에서 돌아오는 곳 (/auth/kakao/callback?code&state).
- * 기존 회원이면 바로 /app, 새 회원이면 회원가입 2단계와 같은 '질문 설정'만 받고 가입을 끝낸다.
+ * 기존 회원이면 바로 /app, 새 회원이면 회원가입 2단계와 같은 '직무 설정'만 받고 가입을 끝낸다.
  */
 export default function KakaoCallback() {
   const navigate = useNavigate()
@@ -46,7 +45,8 @@ export default function KakaoCallback() {
   }, [params, navigate, error])
 
   return (
-    <AuthShell header={false}>
+    // 로딩 → 직무 입력이 같은 위치에서 바뀌도록 둘 다 위에 붙인다 (오류·환영은 가운데)
+    <AuthShell header={false} align={error || joined ? 'center' : 'top'}>
       <div className="sm:mx-auto sm:max-w-[400px] sm:[zoom:0.9]">
         {error ? (
           <div className="text-center">
@@ -75,19 +75,17 @@ export default function KakaoCallback() {
   )
 }
 
-/** 새 카카오 회원: 희망 직무 · 알림 채널 · 알림 주기 (회원가입 2단계와 같은 항목) */
-type Joined = { job: string; frequency?: string; notification?: string }
+/** 새 카카오 회원: 직무 (회원가입 2단계와 같은 항목) */
+type Joined = { job: string }
 
 function Settings({ data, onDone }: { data: NewMember; onDone: (j: Joined) => void }) {
+  const navigate = useNavigate()
   const [job, setJob] = useState('')
-  const [channels, setChannels] = useState<Channel[]>([])
-  const [frequency, setFrequency] = useState<string>()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const notification = channels.length === 2 ? 'both' : channels[0]
   const consents = useConsents()
-  const canSubmit = job.trim() && notification && frequency
-  // 이메일 가입과 같게: '시작하기'를 누를 때 약관 동의를 바텀시트로 받는다
+  const canSubmit = job.trim()
+  // 이메일 가입과 같게: '가입하기'를 누를 때 약관 동의를 바텀시트로 받는다
   const [consentOpen, setConsentOpen] = useState(false)
 
   const onSubmit = (e: FormEvent) => {
@@ -100,8 +98,8 @@ function Settings({ data, onDone }: { data: NewMember; onDone: (j: Joined) => vo
     setBusy(true)
     setError('')
     try {
-      await kakaoRegister({ registrationToken: data.registrationToken, job: job.trim(), notification: notification as Notification, frequency: frequency as Frequency }, data.prefilledData)
-      onDone({ job: job.trim(), frequency, notification })
+      await kakaoRegister({ registrationToken: data.registrationToken, job: job.trim() }, data.prefilledData)
+      onDone({ job: job.trim() })
     } catch (err) {
       // 등록 토큰은 10분만 유효하다
       setError(err instanceof Error ? err.message : '가입하지 못했어요.')
@@ -111,34 +109,27 @@ function Settings({ data, onDone }: { data: NewMember; onDone: (j: Joined) => vo
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: EASE }}>
-      {/* 맨 위 줄: 왼쪽 로그인으로 돌아가기(다른 카카오 계정으로 다시), 가운데 작은 로고 — 회원가입과 같은 모양 */}
-      <div className="relative flex h-9 items-center justify-center">
-        <Link
-          to="/login"
-          replace
-          aria-label="로그인으로 돌아가기"
-          className="absolute left-0 -ml-2 grid h-9 w-9 place-items-center rounded-full text-soft transition-colors hover:bg-tint/[0.06] hover:text-paper"
-        >
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M15 5l-7 7 7 7" />
-          </svg>
-        </Link>
-        <BrandLogo size={17} />
-      </div>
-      <h1 className="mt-8 text-[24px] leading-snug font-semibold tracking-tight text-paper">
-        {data.prefilledData.nickname}님,
-        <br />
-        질문 설정만 하면 끝나요
-      </h1>
-      <p className="mt-2 text-[14px] text-mute">{data.prefilledData.email}</p>
+      {/* 이메일 가입 2단계와 같은 단계 막대: 계정 생성은 카카오로 끝났으니 2/2. 막대는 표시만, ‹는 로그인으로 */}
+      <Stepper step={2} canGoNext={false} locked onGo={() => {}} onBack={() => navigate('/login', { replace: true })} />
+      <h1 className="sr-only">카카오 가입 · 직무 설정</h1>
 
       <form onSubmit={onSubmit} className="mt-10 space-y-6">
+        {/* 카카오 계정 이메일: 이메일 가입의 '인증됨' 칸과 같은 모양. 바꿀 수 없고 커서·포커스도 가지 않는다 */}
+        <div>
+          <span className="block pl-1 text-[13px] font-medium text-soft">이메일</span>
+          <div className={`mt-2 cursor-default ${boxWrap}`}>
+            <input aria-label="이메일" type="email" value={data.prefilledData.email} readOnly tabIndex={-1} className={`${bareInput} pointer-events-none text-soft`} />
+            <span className="flex shrink-0 items-center gap-1 text-[13px] font-semibold text-soft">
+              <KakaoMark className="h-3.5 w-3.5" /> 카카오
+            </span>
+          </div>
+        </div>
         <label className="block">
-          <span className="block pl-1 text-[13px] font-medium text-soft">희망 직무</span>
+          <span className="block pl-1 text-[13px] font-medium text-soft">직무</span>
           <textarea
-            aria-label="희망 직무"
+            aria-label="직무"
             rows={1}
-            placeholder="예: 대용량 트래픽을 다루는 백엔드 개발자"
+            placeholder="예: 백엔드 개발자, 마케터"
             value={job}
             onChange={(e) => {
               setJob(e.target.value)
@@ -147,29 +138,11 @@ function Settings({ data, onDone }: { data: NewMember; onDone: (j: Joined) => vo
             }}
             className={`mt-2 ${boxInput} block h-auto min-h-[54px] resize-none overflow-hidden py-[14px] leading-[24px]`}
           />
-          <span className="mt-2.5 block pl-1 text-xs text-mute">자유롭게 적을수록 질문이 더 잘 맞춰져요.</span>
+          <span className="mt-2.5 block pl-1 text-xs text-mute">적어 주신 직무에 맞는 질문을 매일 하나씩 드려요.</span>
         </label>
-        <div>
-          <span className="block pl-1 text-[13px] font-medium text-soft">알림 채널</span>
-          <div className="mt-2">
-            <ChoiceCards
-              multiple
-              options={CHANNELS}
-              isOn={(v) => channels.includes(v as Channel)}
-              onPick={(v) => setChannels((cs) => (cs.includes(v as Channel) ? cs.filter((c) => c !== v) : [...cs, v as Channel]))}
-            />
-          </div>
-          <span className="mt-2.5 block pl-1 text-xs text-mute">둘 다 선택할 수 있어요.</span>
-        </div>
-        <div>
-          <span className="block pl-1 text-[13px] font-medium text-soft">알림 주기</span>
-          <div className="mt-2">
-            <ChoiceCards options={FREQUENCY} isOn={(v) => frequency === v} onPick={setFrequency} />
-          </div>
-        </div>
         <div className="pt-3">
           <button type="submit" disabled={!canSubmit || busy} className={tossButton}>
-            {busy ? '가입하는 중…' : '시작하기'}
+            {busy ? '가입하는 중…' : '가입하기'}
           </button>
           {error && (
             <p role="alert" className="mt-3 text-center text-[13px] text-[#f04452]">
@@ -179,7 +152,7 @@ function Settings({ data, onDone }: { data: NewMember; onDone: (j: Joined) => vo
         </div>
       </form>
 
-      <BottomSheet open={consentOpen} title="약관에 동의해 주세요" desc="PrePair를 시작하기 전에 확인해 주세요." onClose={() => setConsentOpen(false)}>
+      <BottomSheet open={consentOpen} title="약관에 동의해 주세요" desc="가입하기 전에 확인해 주세요." onClose={() => setConsentOpen(false)}>
         <Consents checked={consents.checked} setChecked={consents.setChecked} />
         <button
           type="button"
@@ -190,7 +163,7 @@ function Settings({ data, onDone }: { data: NewMember; onDone: (j: Joined) => vo
           }}
           className={`mt-5 ${tossButton}`}
         >
-          동의하고 시작하기
+          동의하고 가입하기
         </button>
       </BottomSheet>
     </motion.div>

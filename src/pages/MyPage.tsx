@@ -3,18 +3,16 @@ import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'rea
 import { AppShell, PageTitle } from '../components/AppShell'
 import { BottomSheet } from '../components/BottomSheet'
 import { tossButton } from '../components/auth'
-import { ChoiceCards } from '../components/prefs'
-import { FREQUENCY } from '../components/prefsOptions'
-import { ApiError, changePassword, fetchMe, type Frequency, type Member, updateProfile, useMember } from '../lib/api'
+import { ApiError, changePassword, fetchMe, updateProfile, useMember } from '../lib/api'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
-type Sheet = 'nickname' | 'job' | 'frequency' | 'password' | null
+type Sheet = 'nickname' | 'job' | 'password' | null
 
 /**
- * 마이페이지 (토스식 목록): 묶음별 흰 카드(내 정보: 이메일(보기만)·닉네임·희망 직무 · 질문 알림). 로그아웃·회원 탈퇴는 헤더 프로필 메뉴로 옮김. 넓은 화면은 90% 크기.
+ * 마이페이지 (토스식 목록): 묶음별 흰 카드(내 정보: 이메일(보기만)·닉네임·직무). 로그아웃·회원 탈퇴는 헤더 프로필 메뉴로 옮김. 넓은 화면은 90% 크기.
  * 행 = 이름 | 현재 값 + 화살표, 누르면 편집 창(모바일은 아래에서, 넓은 화면은 가운데).
- * 알림 채널은 스위치로 바로 적용. 저장 버튼 없이 바뀔 때마다 PATCH /api/members 로 저장.
+ * 저장 버튼 없이 바뀔 때마다 PATCH /api/members 로 저장.
  */
 export default function MyPage() {
   // 화면 값은 로그인 세션의 내 정보에서 바로 읽는다. 들어올 때 서버의 최신 값으로 한 번 맞추고, 바꾸면 서버에 저장 → 세션 갱신 → 다시 그림
@@ -25,9 +23,6 @@ export default function MyPage() {
   const nickname = member?.nickname ?? ''
   const accountEmail = member?.email ?? ''
   const job = member?.job ?? ''
-  const email = member?.notification !== 'kakao'
-  const kakao = member?.notification === 'kakao' || member?.notification === 'both'
-  const frequency = member?.frequency ?? 'every'
   const [sheet, setSheet] = useState<Sheet>(null)
   const [toast, setToast] = useState<string | null>(null)
   const toastTimer = useRef<number>(undefined)
@@ -44,20 +39,6 @@ export default function MyPage() {
       () => notify('저장하지 못했어요. 다시 시도해 주세요'),
     )
 
-  // 알림 채널은 하나는 켜져 있어야 함 (서버 값: email | kakao | both)
-  const toggleChannel = (which: 'email' | 'kakao') => {
-    const on = which === 'email' ? email : kakao
-    const other = which === 'email' ? kakao : email
-    if (on && !other) return notify('알림 채널은 하나 이상 켜 두어야 해요')
-    const nextEmail = which === 'email' ? !on : email
-    const nextKakao = which === 'kakao' ? !on : kakao
-    const notification: Member['notification'] = nextEmail && nextKakao ? 'both' : nextKakao ? 'kakao' : 'email'
-    save({ notification })
-  }
-
-  const freq = FREQUENCY.find((f) => f.value === frequency)!
-  const freqText = (f: (typeof FREQUENCY)[number]) => `${f.label} ${f.sub.replace(/[()]/g, '')}`
-
   return (
     <AppShell>
       {/* 넓은 화면은 전체를 90% 크기로 (모바일은 입력칸 확대 문제로 그대로) */}
@@ -68,20 +49,14 @@ export default function MyPage() {
           {/* 로그인 이메일은 바꿀 수 없어 보기만 (화살표 없음) */}
           <InfoRow label="이메일" value={accountEmail} />
           <ValueRow label="닉네임" value={nickname} onClick={() => setSheet('nickname')} />
-          <ValueRow label="희망 직무" value={job} onClick={() => setSheet('job')} />
+          <ValueRow label="직무" value={job} onClick={() => setSheet('job')} />
           {/* 이메일로 가입한 사람만: 카카오 가입자는 비밀번호를 정한 적이 없다 */}
           {member?.provider === 'email' && <ValueRow label="비밀번호 변경" value="" onClick={() => setSheet('password')} />}
         </Section>
 
-        <Section title="질문 알림">
-          <SwitchRow label="이메일로 받기" on={email} onToggle={() => toggleChannel('email')} />
-          <SwitchRow label="카카오톡으로 받기" on={kakao} onToggle={() => toggleChannel('kakao')} />
-          <ValueRow label="알림 주기" value={freqText(freq)} onClick={() => setSheet('frequency')} />
-        </Section>
-
       </div>
 
-      <BottomSheet open={sheet === 'nickname'} title="닉네임 바꾸기" desc="면접과 알림에서 이 이름으로 불러 드려요." onClose={() => setSheet(null)}>
+      <BottomSheet open={sheet === 'nickname'} title="닉네임 바꾸기" desc="면접에서 이 이름으로 불러 드려요." onClose={() => setSheet(null)}>
         <TextEdit
           initial={nickname}
           max={12}
@@ -93,11 +68,11 @@ export default function MyPage() {
           }}
         />
       </BottomSheet>
-      <BottomSheet open={sheet === 'job'} title="희망 직무" desc="자유롭게 적을수록 질문이 더 잘 맞춰져요." onClose={() => setSheet(null)}>
+      <BottomSheet open={sheet === 'job'} title="직무" desc="적어 주신 직무에 맞는 질문을 매일 하나씩 드려요." onClose={() => setSheet(null)}>
         <TextEdit
           multiline
           max={100}
-          placeholder="예: 백엔드 개발자 (Spring, 대용량 트래픽)"
+          placeholder="예: 백엔드 개발자, 마케터"
           initial={job}
           onCancel={() => setSheet(null)}
           onDone={(v) => {
@@ -112,17 +87,6 @@ export default function MyPage() {
           onDone={() => {
             setSheet(null)
             notify('비밀번호를 바꿨어요')
-          }}
-        />
-      </BottomSheet>
-      <BottomSheet open={sheet === 'frequency'} title="알림 주기" desc="질문을 받을 때를 골라 주세요." onClose={() => setSheet(null)}>
-        {/* 회원가입과 같은 선택 카드: 고르면 바로 저장하고 닫힌다 */}
-        <ChoiceCards
-          options={FREQUENCY}
-          isOn={(v) => v === frequency}
-          onPick={(v) => {
-            setSheet(null)
-            if (v !== frequency) save({ frequency: v as Frequency })
           }}
         />
       </BottomSheet>
@@ -177,22 +141,6 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <span className="shrink-0 text-[16px] text-paper">{label}</span>
       <span className="ml-auto min-w-0 truncate text-[15px] text-mute">{value}</span>
     </div>
-  )
-}
-
-function SwitchRow({ label, on, onToggle }: { label: string; on: boolean; onToggle: () => void }) {
-  return (
-    <button type="button" role="switch" aria-checked={on} onClick={onToggle} className={`justify-between ${rowClass}`}>
-      <span className="text-[16px] text-paper">{label}</span>
-      <span className={`relative h-[26px] w-[44px] shrink-0 rounded-full transition-colors duration-200 ${on ? 'bg-toss' : 'bg-tint/[0.14]'}`}>
-        <motion.span
-          className={`absolute top-[3px] left-[3px] h-5 w-5 rounded-full transition-colors duration-200 bg-card shadow-[0_1px_2px_rgba(0,0,0,0.2)]`}
-          initial={false}
-          animate={{ x: on ? 18 : 0 }}
-          transition={{ type: 'spring', stiffness: 600, damping: 35 }}
-        />
-      </span>
-    </button>
   )
 }
 
