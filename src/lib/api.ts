@@ -1,9 +1,11 @@
 import { useSyncExternalStore } from 'react'
+import type { JobCode } from '../components/jobs'
 
 /**
  * member-service API 연동.
  * 개발: vite 프록시가 /api 를 member-service(7200)로 넘긴다. 배포: VITE_API_URL(게이트웨이 주소)을 앞에 붙인다.
  * 응답은 { statusCode, data, message } / 실패는 { statusCode, error: { code, message } }.
+ * interview-service는 응답 { data, message } / 실패 { code, message, details? } 라서 실패는 두 형식을 모두 읽는다.
  */
 const BASE = import.meta.env.VITE_API_URL ?? ''
 
@@ -85,7 +87,7 @@ async function send<T>(path: string, { method = 'GET', body, auth = false }: Opt
     throw new ApiError(0, 'NETWORK', '서버에 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요.')
   }
   const json = await res.json().catch(() => null)
-  if (!res.ok) throw new ApiError(res.status, json?.error?.code ?? 'UNKNOWN', json?.error?.message ?? '요청을 처리하지 못했어요.')
+  if (!res.ok) throw new ApiError(res.status, json?.error?.code ?? json?.code ?? 'UNKNOWN', json?.error?.message ?? json?.message ?? '요청을 처리하지 못했어요.')
   return json?.data as T
 }
 
@@ -144,7 +146,7 @@ export async function fetchMe() {
 }
 
 /** 마이페이지에서 바꾼 값 저장 (닉네임 · 직무 중 바뀐 것만). 성공하면 세션도 바로 맞춘다 */
-export async function updateProfile(patch: Partial<Pick<Member, 'nickname' | 'job'>>) {
+export async function updateProfile(patch: { nickname?: string; job?: JobCode }) {
   await api('/api/members', { method: 'PATCH', body: patch, auth: true })
   session.updateMember(patch)
 }
@@ -158,7 +160,7 @@ export const changePassword = (currentPassword: string, newPassword: string) => 
 
 export const sendSignupCode = (email: string) => api('/api/members/email', { method: 'POST', body: { email, purpose: 'REGISTER' } })
 export const verifySignupCode = (email: string, code: string) => api('/api/members/email-verify', { method: 'POST', body: { email, code } })
-export const register = (body: { email: string; password: string; nickname: string; job: string }) =>
+export const register = (body: { email: string; password: string; nickname: string; job: JobCode }) =>
   api<{ id: string }>('/api/members/register', { method: 'POST', body })
 
 // ── 카카오 ──
@@ -193,7 +195,7 @@ export async function kakaoCallback(code: string): Promise<KakaoNew | null> {
   return null
 }
 
-export async function kakaoRegister(body: { registrationToken: string; job: string }, prefilled: { email: string; nickname: string }) {
+export async function kakaoRegister(body: { registrationToken: string; job: JobCode }, prefilled: { email: string; nickname: string }) {
   const r = await api<Tokens & { memberId: string; nickname?: string }>('/api/auth/kakao/register', { method: 'POST', body })
   session.set({
     accessToken: r.accessToken,

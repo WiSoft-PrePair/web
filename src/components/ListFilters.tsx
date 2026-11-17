@@ -55,10 +55,11 @@ export function ListFilters({
               role="tab"
               aria-selected={on}
               onClick={() => onTab(t.key)}
-              className={`flex shrink-0 items-center justify-between gap-4 rounded-lg px-3 py-2 text-left text-[14px] transition-colors ${on ? 'bg-tint/[0.06] font-medium text-paper' : 'text-mute hover:text-soft'}`}
+              // 선택 표시는 배경·선 없이 굵기와 진한 숫자로. 안 고른 탭 이름은 읽히도록 mute 유지
+              className={`flex shrink-0 items-center justify-between gap-4 px-3 py-2 text-left text-[14px] transition-colors ${on ? 'font-semibold text-paper' : 'text-mute hover:text-soft'}`}
             >
               {t.label}
-              <span className="text-[12px] font-normal text-dim tabular-nums">{t.count}</span>
+              <span className={`text-[12px] font-normal tabular-nums ${on ? 'text-paper' : 'text-dim'}`}>{t.count}</span>
             </button>
           )
         })}

@@ -2,10 +2,10 @@
 
 export type Feedback = { score: number; good: string; lack: string; next: string }
 /**
- * 질문 분류 (모든 직군 공통): 직무(개념·원리) / 경험(직접 한 일과 판단) / 협업(사람과 일한 방식) / 컬처핏(가치관·동기·태도).
+ * 질문 분류 (모든 직군 공통): 직무(개념·원리) / 경험(직접 한 일과 판단) / 협업(사람과 일한 방식) / 컬처핏(가치관·동기·태도) / AI(AI 도구 활용과 AI와 함께 일하는 방식, AI 기술 지식 자체는 직무).
  * 질문당 하나. "~한 경험이 있나요?"처럼 경험을 물으면 직무 내용이어도 경험으로 분류.
  */
-export const TAGS = ['직무', '경험', '협업', '컬처핏'] as const
+export const TAGS = ['직무', '경험', '협업', '컬처핏', 'AI'] as const
 export type Tag = (typeof TAGS)[number]
 
 /** 같은 질문에 쓴 이전 답변 하나 */

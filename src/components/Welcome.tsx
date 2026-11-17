@@ -1,6 +1,7 @@
 import { motion } from 'motion/react'
 import logoMark from '../assets/brand/logo-mark.webp'
 import { tossButton } from './auth'
+import { jobTitle } from './jobs'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -8,7 +9,7 @@ const EASE = [0.22, 1, 0.36, 1] as const
 export function Welcome({ nickname, job, onStart }: { nickname: string; job: string; onStart: () => void }) {
   const rows = [
     { label: '질문 받는 시간', value: '매일 오전 8시' },
-    { label: '직무', value: job.trim() },
+    { label: '직무', value: jobTitle(job) },
   ]
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="text-center">

@@ -3,6 +3,8 @@ import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'rea
 import { AppShell, PageTitle } from '../components/AppShell'
 import { BottomSheet } from '../components/BottomSheet'
 import { tossButton } from '../components/auth'
+import { JobPicker } from '../components/JobPicker'
+import { jobTitle } from '../components/jobs'
 import { ApiError, changePassword, fetchMe, updateProfile, useMember } from '../lib/api'
 
 const EASE = [0.22, 1, 0.36, 1] as const
@@ -49,7 +51,7 @@ export default function MyPage() {
           {/* 로그인 이메일은 바꿀 수 없어 보기만 (화살표 없음) */}
           <InfoRow label="이메일" value={accountEmail} />
           <ValueRow label="닉네임" value={nickname} onClick={() => setSheet('nickname')} />
-          <ValueRow label="직무" value={job} onClick={() => setSheet('job')} />
+          <ValueRow label="직무" value={jobTitle(job)} onClick={() => setSheet('job')} />
           {/* 이메일로 가입한 사람만: 카카오 가입자는 비밀번호를 정한 적이 없다 */}
           {member?.provider === 'email' && <ValueRow label="비밀번호 변경" value="" onClick={() => setSheet('password')} />}
         </Section>
@@ -68,16 +70,12 @@ export default function MyPage() {
           }}
         />
       </BottomSheet>
-      <BottomSheet open={sheet === 'job'} title="직무" desc="적어 주신 직무에 맞는 질문을 매일 하나씩 드려요." onClose={() => setSheet(null)}>
-        <TextEdit
-          multiline
-          max={100}
-          placeholder="예: 백엔드 개발자, 마케터"
-          initial={job}
-          onCancel={() => setSheet(null)}
-          onDone={(v) => {
+      <BottomSheet open={sheet === 'job'} title="직무" desc="고른 직무에 맞는 질문을 매일 하나씩 드려요." onClose={() => setSheet(null)}>
+        <JobPicker
+          value={job}
+          onChange={(code) => {
             setSheet(null)
-            save({ job: v })
+            if (code !== job) save({ job: code })
           }}
         />
       </BottomSheet>
@@ -151,14 +149,12 @@ function TextEdit({
   initial,
   onDone,
   onCancel,
-  multiline = false,
   max,
   placeholder,
 }: {
   initial: string
   onDone: (v: string) => void
   onCancel: () => void
-  multiline?: boolean
   max: number
   placeholder?: string
 }) {
@@ -172,11 +168,7 @@ function TextEdit({
   const field = 'w-full rounded-2xl border border-transparent bg-tint/[0.04] px-4 py-3.5 text-[16px] leading-6 text-paper outline-none transition-colors placeholder:text-dim focus:border-dim focus:bg-card'
   return (
     <form onSubmit={submit}>
-      {multiline ? (
-        <textarea autoFocus rows={3} maxLength={max} placeholder={placeholder} value={value} onChange={(e) => setValue(e.target.value)} className={`${field} block resize-none`} />
-      ) : (
-        <input autoFocus maxLength={max} placeholder={placeholder} value={value} onChange={(e) => setValue(e.target.value)} className={field} />
-      )}
+      <input autoFocus maxLength={max} placeholder={placeholder} value={value} onChange={(e) => setValue(e.target.value)} className={field} />
       <p className="mt-2 text-right text-[12px] text-mute tabular-nums">
         {value.length} / {max}
       </p>

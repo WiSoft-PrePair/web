@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router'
 import { BottomSheet } from '../components/BottomSheet'
 import { OtpInput } from '../components/OtpInput'
 import { Welcome } from '../components/Welcome'
+import { JobPicker } from '../components/JobPicker'
+import type { JobCode } from '../components/jobs'
 import { Consents } from '../components/Consents'
 import { useConsents } from '../components/useConsents'
 import { Stepper } from '../components/Stepper'
@@ -42,7 +44,7 @@ export default function Signup() {
   const [verify, setVerify] = useState<Verify>('idle')
   const [password, setPassword] = useState('')
   const [nickname, setNickname] = useState('')
-  const [job, setJob] = useState('')
+  const [job, setJob] = useState<JobCode | ''>('')
   // 서버 요청 중 표시와 오류 문구 (이메일·인증번호 칸 아래, 가입 버튼 아래)
   const [busy, setBusy] = useState<'send' | 'verify' | 'submit' | null>(null)
   const [emailError, setEmailError] = useState('')
@@ -64,7 +66,7 @@ export default function Signup() {
   const suggest = useEmailSuggest(email, pickEmail, verify === 'idle')
   const accountValid = verify === 'verified' && password.length >= 8 && !!nickname.trim()
   const consents = useConsents()
-  const canSubmit = accountValid && job.trim()
+  const canSubmit = accountValid && !!job
   // 이메일을 서버로 보내기 전에(첫 '인증하기') 약관 동의를 바텀시트로 받는다
   const [consentOpen, setConsentOpen] = useState(false)
 
@@ -104,11 +106,11 @@ export default function Signup() {
   }
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    if (!canSubmit || busy) return
+    if (!job || !canSubmit || busy) return
     setBusy('submit')
     setSubmitError('')
     try {
-      await register({ email: email.trim(), password, nickname: nickname.trim(), job: job.trim() })
+      await register({ email: email.trim(), password, nickname: nickname.trim(), job })
       await login(email.trim(), password)
       // 완료 화면: 체크 → 인사 → 설정 요약 → 버튼으로 메인 (자동으로 넘기지 않는다)
       setStep('done')
@@ -230,20 +232,13 @@ export default function Signup() {
             <h1 className="sr-only">회원가입 · 직무 설정</h1>
 
             <form onSubmit={onSubmit} className="mt-10 space-y-6">
-              <Field label="직무" hint="적어 주신 직무에 맞는 질문을 매일 하나씩 드려요.">
-                <textarea
-                  aria-label="직무"
-                  rows={1}
-                  placeholder="예: 백엔드 개발자, 마케터"
-                  value={job}
-                  onChange={(e) => {
-                    setJob(e.target.value)
-                    e.target.style.height = 'auto'
-                    e.target.style.height = `${e.target.scrollHeight}px`
-                  }}
-                  className={`${boxInput} block h-auto min-h-[54px] resize-none overflow-hidden py-[14px] leading-[24px]`}
-                />
-              </Field>
+              <div className="text-center">
+                <h2 className="text-[22px] font-bold leading-snug text-paper">어떤 직무를 준비하고 있나요?</h2>
+                <p className="mt-2 text-[14px] text-mute">고른 직무에 맞는 질문을 매일 하나씩 드려요.</p>
+                <div className="mt-10">
+                  <JobPicker value={job} onChange={setJob} />
+                </div>
+              </div>
 
               <div className="pt-3">
                 <button type="submit" disabled={!canSubmit || busy === 'submit'} className={tossButton}>

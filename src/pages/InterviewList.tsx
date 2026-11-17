@@ -72,9 +72,9 @@ export default function InterviewList() {
                     <ScoreRing score={r.score} />
                     {/* 모바일: 질문 한 줄 + 아래 줄에 태그·날짜 / 넓은 화면(sm~): 태그 · 질문 · 날짜 한 줄 */}
                     <span className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-4">
-                      <span className="block min-w-0 truncate text-[15px] font-medium text-[#4e5968] transition-colors duration-200 group-hover:text-paper sm:order-2 sm:flex-1">{r.first}</span>
+                      <span className="block min-w-0 truncate text-[15px] text-soft transition-colors duration-200 group-hover:text-paper sm:order-2 sm:flex-1">{r.first}</span>
                       <span className="flex items-center gap-2 sm:contents">
-                        <span className="w-[52px] shrink-0 rounded-full border border-line py-[3px] text-center text-[12px] text-mute sm:order-1">{r.tag}</span>
+                        <span className="w-[46px] shrink-0 rounded-md bg-tint/[0.05] py-[3px] text-center text-[12px] font-medium text-mute sm:order-1">{r.tag}</span>
                         <span className="shrink-0 text-[12px] text-mute tabular-nums sm:order-3">{r.date}</span>
                       </span>
                     </span>

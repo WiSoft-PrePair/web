@@ -1,12 +1,14 @@
 import { motion } from 'motion/react'
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
-import { AuthShell, BrandLogo, KakaoMark, bareInput, boxInput, boxWrap, tossButton } from '../components/auth'
+import { AuthShell, BrandLogo, KakaoMark, bareInput, boxWrap, tossButton } from '../components/auth'
 import { BottomSheet } from '../components/BottomSheet'
 import { Consents } from '../components/Consents'
 import { useConsents } from '../components/useConsents'
 import { Stepper } from '../components/Stepper'
 import { Welcome } from '../components/Welcome'
+import { JobPicker } from '../components/JobPicker'
+import type { JobCode } from '../components/jobs'
 import { kakaoCallback, kakaoRegister, peekKakaoState, takeKakaoState } from '../lib/api'
 
 const EASE = [0.22, 1, 0.36, 1] as const
@@ -80,11 +82,11 @@ type Joined = { job: string }
 
 function Settings({ data, onDone }: { data: NewMember; onDone: (j: Joined) => void }) {
   const navigate = useNavigate()
-  const [job, setJob] = useState('')
+  const [job, setJob] = useState<JobCode | ''>('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const consents = useConsents()
-  const canSubmit = job.trim()
+  const canSubmit = !!job
   // 이메일 가입과 같게: '가입하기'를 누를 때 약관 동의를 바텀시트로 받는다
   const [consentOpen, setConsentOpen] = useState(false)
 
@@ -95,11 +97,12 @@ function Settings({ data, onDone }: { data: NewMember; onDone: (j: Joined) => vo
     else setConsentOpen(true)
   }
   const submit = async () => {
+    if (!job) return
     setBusy(true)
     setError('')
     try {
-      await kakaoRegister({ registrationToken: data.registrationToken, job: job.trim() }, data.prefilledData)
-      onDone({ job: job.trim() })
+      await kakaoRegister({ registrationToken: data.registrationToken, job }, data.prefilledData)
+      onDone({ job })
     } catch (err) {
       // 등록 토큰은 10분만 유효하다
       setError(err instanceof Error ? err.message : '가입하지 못했어요.')
@@ -124,22 +127,13 @@ function Settings({ data, onDone }: { data: NewMember; onDone: (j: Joined) => vo
             </span>
           </div>
         </div>
-        <label className="block">
-          <span className="block pl-1 text-[13px] font-medium text-soft">직무</span>
-          <textarea
-            aria-label="직무"
-            rows={1}
-            placeholder="예: 백엔드 개발자, 마케터"
-            value={job}
-            onChange={(e) => {
-              setJob(e.target.value)
-              e.target.style.height = 'auto'
-              e.target.style.height = `${e.target.scrollHeight}px`
-            }}
-            className={`mt-2 ${boxInput} block h-auto min-h-[54px] resize-none overflow-hidden py-[14px] leading-[24px]`}
-          />
-          <span className="mt-2.5 block pl-1 text-xs text-mute">적어 주신 직무에 맞는 질문을 매일 하나씩 드려요.</span>
-        </label>
+        <div className="pt-4 text-center">
+          <h2 className="text-[22px] font-bold leading-snug text-paper">어떤 직무를 준비하고 있나요?</h2>
+          <p className="mt-2 text-[14px] text-mute">고른 직무에 맞는 질문을 매일 하나씩 드려요.</p>
+          <div className="mt-10">
+            <JobPicker value={job} onChange={setJob} />
+          </div>
+        </div>
         <div className="pt-3">
           <button type="submit" disabled={!canSubmit || busy} className={tossButton}>
             {busy ? '가입하는 중…' : '가입하기'}
